@@ -111,6 +111,7 @@ public:
             DestroyHoldElement();
         }
 
+        std::memset(m_Storage, 0, sizeof(m_Storage));
         new (&m_Storage[0]) OptionalType(std::forward<Args>(args)...);
         m_bValid = true;
     }
@@ -179,6 +180,5 @@ private:
         OptionalType* type = (OptionalType*)m_Storage;
         type->~OptionalType();
         m_bValid = false;
-        std::memset(m_Storage, 0, sizeof(m_Storage));
     }
 };
