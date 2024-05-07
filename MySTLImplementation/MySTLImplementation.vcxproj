@@ -133,6 +133,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Array.h" />
+    <ClInclude Include="BstTree.h" />
     <ClInclude Include="Map.h" />
     <ClInclude Include="Optional.h" />
     <ClInclude Include="SharedPtr.h" />
