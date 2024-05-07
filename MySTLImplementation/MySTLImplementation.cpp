@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "Array.h"
+#include "Optional.h"
 
 enum EAttributeIndex
 {
@@ -24,6 +25,14 @@ int main()
     attributes[HpMax] = 40;
 
     assert(attributes[Hp] == 40 && attributes[HpMax] == 40);
+
+    TOptional<int32_t> index = NullOpt;
+    if (!index.IsSet())
+    {
+        index = 4;
+
+        assert(index.IsSet() && index.GetValue() == 4);
+    }
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu

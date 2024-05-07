@@ -129,9 +129,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="MySTLImplementation.cpp" />
+    <ClCompile Include="String.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Array.h" />
+    <ClInclude Include="Map.h" />
+    <ClInclude Include="Optional.h" />
+    <ClInclude Include="String.h" />
+    <ClInclude Include="UniquePtr.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
