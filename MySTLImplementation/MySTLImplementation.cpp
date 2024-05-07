@@ -3,9 +3,27 @@
 
 #include <iostream>
 
+#include "Array.h"
+
+enum EAttributeIndex
+{
+    Hp,
+    HpMax,
+    Mana,
+    ManaMax,
+    Str,
+    Dex,
+    NumAttributes
+};
+
 int main()
 {
-    std::cout << "Hello World!\n";
+    TStaticArray<int32_t, NumAttributes> attributes = {0};
+
+    attributes[Hp] = 40;
+    attributes[HpMax] = 40;
+
+    assert(attributes[Hp] == 40 && attributes[HpMax] == 40);
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
