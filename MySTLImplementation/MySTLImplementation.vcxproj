@@ -135,6 +135,7 @@
     <ClInclude Include="Array.h" />
     <ClInclude Include="Map.h" />
     <ClInclude Include="Optional.h" />
+    <ClInclude Include="SharedPtr.h" />
     <ClInclude Include="String.h" />
     <ClInclude Include="UniquePtr.h" />
   </ItemGroup>
