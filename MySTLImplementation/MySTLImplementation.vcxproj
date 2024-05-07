@@ -128,15 +128,22 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="FixedString.cpp" />
     <ClCompile Include="MySTLImplementation.cpp" />
     <ClCompile Include="String.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Array.h" />
     <ClInclude Include="BstTree.h" />
+    <ClInclude Include="Delegate.h" />
+    <ClInclude Include="EnumAsByte.h" />
+    <ClInclude Include="FixedString.h" />
+    <ClInclude Include="List.h" />
     <ClInclude Include="Map.h" />
+    <ClInclude Include="MulticastDelegate.h" />
     <ClInclude Include="Optional.h" />
     <ClInclude Include="SharedPtr.h" />
+    <ClInclude Include="Span.h" />
     <ClInclude Include="String.h" />
     <ClInclude Include="UniquePtr.h" />
   </ItemGroup>
