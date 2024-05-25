@@ -7,42 +7,42 @@ template <typename PointerType>
 class SingleThreadSafeRefCounter
 {
 public:
-    SingleThreadSafeRefCounter(PointerType* p):
-        m_NumWeakRefs{0},
-        m_NumRefs{1},
-        m_Pointer{p}
+    SingleThreadSafeRefCounter(PointerType* p) :
+        numWeakRefs{0},
+        numRefs{1},
+        pointer{p}
     {
     }
 
     void Release()
     {
-        int32_t numRefs = --m_NumRefs;
+        int32_t numRefs = --this->numRefs;
 
         if (numRefs == 0)
         {
-            if (m_NumWeakRefs == 0)
+            if (numWeakRefs == 0)
             {
                 delete this;
             }
             else
             {
-                m_Pointer = nullptr
+                pointer = nullptr;
             }
         }
     }
 
     void AddRef()
     {
-        m_NumRefs++;
+        numRefs++;
     }
 
     void ReleaseWeakRef()
     {
-        int32_t numRefs = --m_NumWeakRefs;
+        int32_t numRefs = --numWeakRefs;
 
         if (numRefs == 0)
         {
-            if (m_NumRefs == 0)
+            if (numRefs == 0)
             {
                 delete this;
             }
@@ -51,29 +51,29 @@ public:
 
     void AddWeakRef()
     {
-        m_NumWeakRefs++;
+        numWeakRefs++;
     }
-    
-    T* GetPointer() const
+
+    PointerType* GetPointer() const
     {
-        return m_Pointer;
+        return pointer;
     }
 
     int32_t GetUseCount() const
     {
-        return m_NumRefs;
+        return numRefs;
     }
 
 protected:
     ~SingleThreadSafeRefCounter() noexcept
     {
-        delete m_Pointer;
+        delete pointer;
     }
 
 private:
-    int32_t m_NumRefs{0};
-    int32_t m_NumWeakRefs{0};
-    PointerType* m_Pointer;
+    int32_t numRefs{0};
+    int32_t numWeakRefs{0};
+    PointerType* pointer;
 };
 
 template <typename PointerType>
@@ -81,41 +81,41 @@ class MultiThreadSafeRefCounter
 {
 public:
     MultiThreadSafeRefCounter(PointerType* p) :
-        m_NumWeakRefs{0},
-        m_NumRefs{1},
-        m_Pointer{p}
+        numWeakRefs{0},
+        numRefs{1},
+        pointer{p}
     {
     }
 
     void Release()
     {
-        int32_t numRefs = --m_NumRefs;
+        int32_t numRefs = --numRefs;
 
         if (numRefs == 0)
         {
-            if (m_NumWeakRefs == 0)
+            if (numWeakRefs == 0)
             {
                 delete this;
             }
             else
             {
-                m_Pointer = nullptr
+                pointer = nullptr;
             }
         }
     }
 
     void AddRef()
     {
-        m_NumRefs++;
+        numRefs++;
     }
 
     void ReleaseWeakRef()
     {
-        --m_NumWeakRefs;
+        --numWeakRefs;
 
-        if (m_NumWeakRefs == 0)
+        if (numWeakRefs == 0)
         {
-            if (m_NumRefs == 0)
+            if (numRefs == 0)
             {
                 delete this;
             }
@@ -124,29 +124,29 @@ public:
 
     void AddWeakRef()
     {
-        m_NumWeakRefs++;
+        numWeakRefs++;
     }
 
-    T* GetPointer() const
+    PointerType* GetPointer() const
     {
-        return m_Pointer;
+        return pointer;
     }
 
     int32_t GetUseCount() const
     {
-        return m_NumRefs;
+        return numRefs;
     }
 
 protected:
     ~MultiThreadSafeRefCounter() noexcept
     {
-        delete m_Pointer;
+        delete pointer;
     }
 
 private:
-    std::atomic_int32_t m_NumRefs{0};
-    std::atomic_int32_t m_NumWeakRefs{0};
-    PointerType* m_Pointer;
+    std::atomic_int32_t numRefs{0};
+    std::atomic_int32_t numWeakRefs{0};
+    PointerType* pointer;
 };
 
 enum class EThreadMode
@@ -166,49 +166,60 @@ public:
     using RefCounter = std::conditional_t<ThreadMode == EThreadMode::SingleThread, SingleThreadSafeRefCounter<PointerType>, MultiThreadSafeRefCounter<PointerType>>;
 
     TSharedPtr() :
-        m_RefCounter{nullptr},
-        m_Pointer{nullptr}
+        refCounter{nullptr},
+        pointer{nullptr}
     {
     }
 
-    TSharedPtr(PointerType *p) :
-        m_RefCounter{new RefCounter(p)},
-        m_Pointer{p}
+    TSharedPtr(RefCounter *counter) :
+        refCounter{counter},
+        pointer{nullptr}
     {
-    }
-
-    TSharedPtr(const TSharedPtr<PointerType, ThreadMode> &p) :
-        m_RefCounter{p.m_RefCounter},
-        m_Pointer{p.m_Pointer}
-    {
-        if (m_RefCounter)
+        if (refCounter)
         {
-            m_RefCounter->AddRef();
+            pointer = refCounter->GetPointer();
+            refCounter->AddRef();
+        }
+    }
+
+    TSharedPtr(PointerType* p) :
+        refCounter{new RefCounter(p)},
+        pointer{p}
+    {
+    }
+
+    TSharedPtr(const TSharedPtr<PointerType, ThreadMode>& p) :
+        refCounter{p.refCounter},
+        pointer{p.pointer}
+    {
+        if (refCounter)
+        {
+            refCounter->AddRef();
         }
     }
 
     TSharedPtr& operator=(const TSharedPtr<PointerType, ThreadMode>& p)
     {
-        m_RefCounter = p.m_RefCounter;
-        m_Pointer = p.m_Pointer;
+        refCounter = p.refCounter;
+        pointer = p.pointer;
 
-        if (m_RefCounter)
+        if (refCounter)
         {
-            m_RefCounter->AddRef();
+            refCounter->AddRef();
         }
     }
 
     ~TSharedPtr() noexcept
     {
-        if (m_RefCounter)
+        if (refCounter)
         {
-            m_RefCounter->Release();
+            refCounter->Release();
         }
     }
 
     PointerType* Get() const
     {
-        return m_Pointer;
+        return pointer;
     }
 
     void Reset(PointerType* p)
@@ -217,35 +228,35 @@ public:
 
         if (p)
         {
-            m_Pointer = p;
-            m_RefCounter = new RefCounter(p);
+            pointer = p;
+            refCounter = new RefCounter(p);
         }
     }
 
     void Swap(TSharedPtr<PointerType, ThreadMode>& p)
     {
-        std::swap(m_Pointer, p.m_Pointer);
-        std::swap(m_RefCounter, p.m_RefCounter);
+        std::swap(pointer, p.pointer);
+        std::swap(refCounter, p.refCounter);
     }
 
     PointerType* operator->() const
     {
-        return m_Pointer;
+        return pointer;
     }
 
     PointerType& operator*() const
     {
-        return m_Pointer;
+        return pointer;
     }
 
     int32_t GetUseCount() const
     {
-        return m_RefCounter->GetUseCount();
+        return refCounter->GetUseCount();
     }
 
 private:
-    RefCounter* m_RefCounter{nullptr};
-    PointerType* m_Pointer{nullptr};
+    RefCounter* refCounter{nullptr};
+    PointerType* pointer{nullptr};
 };
 
 template <typename PointerType, EThreadMode ThreadMode = EThreadMode::Auto>
@@ -256,14 +267,14 @@ public:
     using RefCounter = SharedPtr::RefCounter;
 
     TWeakPointer() = default;
-    
+
     template <typename OtherPointerType>
     TWeakPointer(const TSharedPtr<OtherPointerType, ThreadMode>& p) :
-        m_RefCounter(p.m_RefCounter)
+        refCounter(p.refCounter)
     {
-        if (m_RefCounter)
+        if (refCounter)
         {
-            m_RefCounter->AddWeakRef();
+            refCounter->AddWeakRef();
         }
     }
 
@@ -271,42 +282,47 @@ public:
     TWeakPointer(const TWeakPointer<OtherPointerType>& p)
     {
         static_assert(std::is_assignable_v<PointerType, OtherPointerType>);
-        m_RefCounter = (RefCounter*)p.m_RefCounter;
+        refCounter = (RefCounter*)p.refCounter;
 
-        if (m_RefCounter)
+        if (refCounter)
         {
-            m_RefCounter->AddWeakRef();
+            refCounter->AddWeakRef();
         }
     }
 
     ~TWeakPointer() noexcept
     {
-        if (m_RefCounter)
+        if (refCounter)
         {
-            m_RefCounter->ReleaseWeakRef();
+            refCounter->ReleaseWeakRef();
         }
     }
 
     bool IsValid() const
     {
-        return m_RefCounter;
+        return refCounter;
     }
 
     PointerType* Get() const
     {
-        return m_RefCounter->GetPointer();
+        return refCounter->GetPointer();
     }
 
     PointerType* operator->() const
     {
-        return m_RefCounter->GetPointer();
+        return refCounter->GetPointer();
     }
 
     PointerType& operator*() const
     {
-        return *m_RefCounter->GetPointer();
+        return *refCounter->GetPointer();
+    }
+
+    TSharedPtr<PointerType, ThreadMode> ToShared() const
+    {
+        return TSharedPtr<PointerType, ThreadMode>{refCounter};
     }
 
 private:
-    RefCounter* m_RefCounter{nullptr};
+    RefCounter* refCounter{nullptr};
 };

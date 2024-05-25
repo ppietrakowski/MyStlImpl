@@ -3,9 +3,7 @@
 
 #include <iostream>
 
-#include "Array.h"
-#include "Optional.h"
-#include "MulticastDelegate.h"
+#include "Collections.h"
 
 enum EAttributeIndex
 {
@@ -34,14 +32,6 @@ int main()
 
         assert(index.IsSet() && index.GetValue() == 4);
     }
-
-    TMulticastDelegate<> d;
-    d.AddStatic([]()
-    {
-        puts("OK");
-    });
-
-    d.Broadcast();
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu

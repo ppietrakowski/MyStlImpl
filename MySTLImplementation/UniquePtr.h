@@ -51,7 +51,7 @@ public:
     template <typename OtherPointerType, typename OtherDeleterType>
     TUniquePtr(TUniquePtr<OtherPointerType, OtherDeleterType>&& ptr) noexcept
     {
-        PointerType* p = static_cast<PointerType*>(std::exchange(ptr.compressedPair.p, nullptr);
+        PointerType* p = static_cast<PointerType*>(std::exchange(ptr.compressedPair.p, nullptr));
 
         compressedPair = std::exchange(ptr.compressedPair, TCompressedPair<PointerType*, DeleterType>{});
         ptr.compressedPair.p = nullptr;
@@ -61,7 +61,7 @@ public:
     template <typename OtherPointerType, typename OtherDeleterType>
     TUniquePtr& operator=(TUniquePtr<OtherPointerType, OtherDeleterType>&& ptr) noexcept
     {
-        PointerType* p = static_cast<PointerType*>(std::exchange(ptr.compressedPair.p, nullptr);
+        PointerType* p = static_cast<PointerType*>(std::exchange(ptr.compressedPair.p, nullptr));
 
         compressedPair = std::exchange(ptr.compressedPair, TCompressedPair<PointerType*, DeleterType>{});
         ptr.compressedPair.p = nullptr;

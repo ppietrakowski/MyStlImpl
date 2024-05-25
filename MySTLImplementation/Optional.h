@@ -22,18 +22,18 @@ public:
     }
 
     TOptional(OptionalTag) :
-        m_bValid(false)
+        valid(false)
     {
     }
 
     TOptional& operator=(OptionalTag)
     {
-        m_bValid = false;
+        valid = false;
         return *this;
     }
 
     TOptional(const OptionalType& optionalValue) :
-        m_bValid{false}
+        valid{false}
     {
         Emplace(optionalValue);
     }
@@ -45,8 +45,8 @@ public:
     }
 
     TOptional(OptionalType&& optionalValue) :
-        m_bValid{false},
-        m_Storage{}
+        valid{false},
+        storage{}
     {
         Emplace(std::move(optionalValue));
     }
@@ -104,21 +104,21 @@ public:
     {
         Reset();
 
-        std::memset(m_Storage, 0, sizeof(m_Storage));
-        new (&m_Storage[0]) OptionalType(std::forward<Args>(args)...);
-        m_bValid = true;
+        std::memset(storage, 0, sizeof(storage));
+        new (&storage[0]) OptionalType(std::forward<Args>(args)...);
+        valid = true;
     }
 
     const OptionalType& GetValue() const
     {
-        assert(m_bValid && "TOptional is not set");
-        return *(const OptionalType*)&m_Storage[0];
+        assert(valid && "TOptional is not set");
+        return *(const OptionalType*)&storage[0];
     }
 
     OptionalType& GetValue()
     {
-        assert(m_bValid && "TOptional is not set");
-        return *(OptionalType*)&m_Storage[0];
+        assert(valid && "TOptional is not set");
+        return *(OptionalType*)&storage[0];
     }
 
     const OptionalType& operator*() const
@@ -143,35 +143,35 @@ public:
 
     bool IsSet() const
     {
-        return m_bValid;
+        return valid;
     }
 
     operator bool() const
     {
-        return m_bValid;
+        return valid;
     }
 
     bool operator!() const
     {
-        return !m_bValid;
+        return !valid;
     }
 
     void Reset()
     {
-        if (m_bValid)
+        if (valid)
         {
             DestroyHoldElement();
         }
     }
 
 private:
-    uint8_t m_Storage[sizeof(OptionalType)];
-    bool m_bValid;
+    uint8_t storage[sizeof(OptionalType)];
+    bool valid;
 
     void DestroyHoldElement()
     {
-        OptionalType* type = (OptionalType*)m_Storage;
+        OptionalType* type = (OptionalType*)storage;
         type->~OptionalType();
-        m_bValid = false;
+        valid = false;
     }
 };
