@@ -305,22 +305,14 @@ inline CString<N>& CString<N>::operator=(const std::string& str)
 template<size_t N>
 inline char& CString<N>::operator[](size_t i)
 {
-    if (i >= N)
-    {
-        throw std::out_of_range{"CString out of range"};
-    }
-
+    assert(i < N && "CString out of range");
     return m_Buffer[i];
 }
 
 template<size_t N>
 inline const char& CString<N>::operator[](size_t i) const
 {
-    if (i >= N)
-    {
-        throw std::out_of_range{"CString out of range"};
-    }
-
+    assert(i < N && "CString out of range");
     return m_Buffer[i];
 }
 
@@ -655,7 +647,7 @@ inline CString<N>& CString<N>::append(const char* str, size_t n)
 
     if (m_Length + n >= N)
     {
-        throw std::out_of_range{"May append beyound allocated array"};
+        n = N - m_Length;
     }
 
     strncat(m_Buffer + m_Length, str, n);
@@ -674,7 +666,7 @@ inline CString<N>& CString<N>::append(const char* str, size_t offset, size_t n)
 
     if (m_Length + n >= N)
     {
-        throw std::out_of_range{"May append beyound allocated array"};
+        n = N - m_Length;
     }
 
     strncat(m_Buffer + m_Length, str + offset, n);

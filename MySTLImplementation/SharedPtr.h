@@ -111,9 +111,9 @@ public:
 
     void ReleaseWeakRef()
     {
-        int32_t numRefs = --m_NumWeakRefs;
+        --m_NumWeakRefs;
 
-        if (numRefs == 0)
+        if (m_NumWeakRefs == 0)
         {
             if (m_NumRefs == 0)
             {

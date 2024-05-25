@@ -12,18 +12,18 @@ void String::Append(const char* str, int32_t length)
 
 String String::Substring(int32_t startOffset, int32_t length) const
 {
-    int32_t l = m_Data.GetNumElements() - startOffset - length;
+    int32_t l = data.GetNumElements() - startOffset - length;
     if (l < 0)
     {
         return String{};
     }
 
-    return String{m_Data.GetData() + startOffset, length};
+    return String{data.GetData() + startOffset, length};
 }
 
 int32_t String::Find(const String& str, int32_t startOffset) const
 {
-    return FindImpl(str.m_Data.GetData(), str.m_Data.GetNumElements(), startOffset);
+    return FindImpl(str.data.GetData(), str.data.GetNumElements(), startOffset);
 }
 
 int32_t String::Find(const char* str, int32_t startOffset) const
@@ -33,7 +33,7 @@ int32_t String::Find(const char* str, int32_t startOffset) const
 
 int32_t String::RFind(const String& str, int32_t endOffset) const
 {
-    return RFindImpl(str.m_Data.GetData(), str.m_Data.GetNumElements(), endOffset);
+    return RFindImpl(str.data.GetData(), str.data.GetNumElements(), endOffset);
 }
 
 int32_t String::RFind(const char* str, int32_t endOffset) const
@@ -44,7 +44,7 @@ int32_t String::RFind(const char* str, int32_t endOffset) const
 uint64_t String::GetHashCode() const
 {
     /* simple djb2 hashing */
-    const char* it = m_Data.GetData();
+    const char* it = data.GetData();
     uint64_t hashv = 5381;
     uint64_t c = *it++;
 
@@ -71,16 +71,16 @@ struct VaListAutoDeleter
 
 void String::Clear()
 {
-    if (!m_Data.IsEmpty())
+    if (!data.IsEmpty())
     {
-        m_Data[0] = '\0';
-        m_Data.Empty();
+        data[0] = '\0';
+        data.Empty();
     }
 }
 
 std::ostream& String::operator<<(std::ostream& stream) const
 {
-    stream << m_Data.GetData();
+    stream << data.GetData();
     return stream;
 }
 
@@ -106,31 +106,31 @@ String String::VPrintf(const char* format, va_list list)
 int32_t String::Compare(const String& other) const
 {
     int32_t length = std::min(other.GetLength(), GetLength());
-    return std::char_traits<char>::compare(m_Data.GetData(), other.GetData(), length);
+    return std::char_traits<char>::compare(data.GetData(), other.GetData(), length);
 }
 
 int32_t String::Compare(const char* other) const
 {
     size_t len = strlen(other);
     int32_t length = std::min<int32_t>((int32_t)len, GetLength());
-    return std::char_traits<char>::compare(m_Data.GetData(), other, length);
+    return std::char_traits<char>::compare(data.GetData(), other, length);
 }
 
 void String::CopyFrom(const char* str, int32_t length)
 {
     assert(str != nullptr);
 
-    if (!m_Data.IsEmpty())
+    if (!data.IsEmpty())
     {
-        m_Data.RemoveIndex(m_Data.GetNumElements() - 1);
+        data.RemoveIndex(data.GetNumElements() - 1);
     }
 
-    m_Data.AllocAbs(m_Data.GetNumElements() + length);
+    data.AllocAbs(data.GetNumElements() + length);
 
     for (int32_t i = 0; i < length; ++i)
     {
-        m_Data.Add(str[i]);
+        data.Add(str[i]);
     }
 
-    m_Data.Add('\0');
+    data.Add('\0');
 }

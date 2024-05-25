@@ -11,7 +11,7 @@ public:
     using TEnumInt = uint8_t;
 
     constexpr TEnumAsByte() :
-        TEnumAsByte{0}
+        TEnumAsByte{TEnum{}}
     {
     }
 

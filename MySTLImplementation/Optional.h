@@ -72,27 +72,23 @@ public:
     TOptional(SelfClass&& optional) noexcept :
         TOptional(NullOpt)
     {
+        Reset();
+
         if (optional.IsSet())
         {
             OptionalType value{std::move(optional.GetValue())};
             Emplace(std::move(value));
-        }
-        else
-        {
-            Reset();
         }
     }
 
     TOptional& operator=(SelfClass&& optional) noexcept
     {
+        Reset();
+
         if (optional.IsSet())
         {
             OptionalType value{std::move(optional.GetValue())};
             Emplace(std::move(value));
-        }
-        else
-        {
-            Reset();
         }
 
         return *this;
@@ -106,10 +102,7 @@ public:
     template <typename ...Args>
     void Emplace(Args&& ...args)
     {
-        if (m_bValid)
-        {
-            DestroyHoldElement();
-        }
+        Reset();
 
         std::memset(m_Storage, 0, sizeof(m_Storage));
         new (&m_Storage[0]) OptionalType(std::forward<Args>(args)...);

@@ -14,8 +14,8 @@
 template <typename KeyType, typename ValueType>
 struct TKeyValue
 {
-    KeyType Key;
-    ValueType Value;
+    KeyType key;
+    ValueType value;
 
     TKeyValue() = default;
 
@@ -23,8 +23,8 @@ struct TKeyValue
 
     template <typename ...Args>
     TKeyValue(const KeyType& key, Args&& ...args) :
-        Key{key},
-        Value{std::forward<Args>(args)...}
+        key{key},
+        value{std::forward<Args>(args)...}
     {
     }
 
@@ -64,25 +64,25 @@ public:
     template <typename ...Args>
     void Emplace(const KeyType& key, Args&& ...args)
     {
-        m_Values.EmplaceBack(key, std::move(ValueType(std::forward<Args>(args)...)));
+        values.EmplaceBack(key, std::move(ValueType(std::forward<Args>(args)...)));
 
-        m_Values.Sort([](const ArrayType& a, const ArrayType& b)
+        values.Sort([](const ArrayType& a, const ArrayType& b)
         {
             Predicate pd{};
-            return pd(a.Key, b.Key);
+            return pd(a.key, b.key);
         });
     }
 
     const ValueType* Find(const KeyType& key) const
     {
         const ArrayType* v = FindValue(key);
-        return v ? &v->Value : nullptr;
+        return v ? &v->value : nullptr;
     }
 
     ValueType* Find(const KeyType& key)
     {
         const ArrayType* v = FindValue(key);
-        return v ? const_cast<ValueType*>(&v->Value) : nullptr;
+        return v ? const_cast<ValueType*>(&v->value) : nullptr;
     }
 
     const ValueType& operator[](const KeyType& key) const
@@ -99,29 +99,29 @@ public:
         return const_cast<ValueType&>(*it);
     }
 
-    uint64_t GetNumElements() const
+    int32_t GetNumElements() const
     {
-        return m_Values.GetNumElements();
+        return values.GetNumElements();
     }
 
     auto begin() const
     {
-        return m_Values.begin();
+        return values.begin();
     }
 
     auto end() const
     {
-        return m_Values.end();
+        return values.end();
     }
 
     TArray<KeyType> GetKeys() const
     {
         TArray<KeyType> keys;
-        keys.AllocAbs(m_Values.GetNumElements());
+        keys.AllocAbs(values.GetNumElements());
 
-        for (const ArrayType& v : m_Values)
+        for (const ArrayType& v : values)
         {
-            keys.Add(v.Key);
+            keys.Add(v.key);
         }
 
         return keys;
@@ -136,37 +136,37 @@ public:
 
     void Clear()
     {
-        m_Values.Clear();
+        values.Clear();
     }
 
     void Remove(const KeyType& key)
     {
         const ArrayType* m = FindValue(key);
-        uint64_t index = static_cast<uint64_t>(m - m_Values.GetData());
-        m_Values.RemoveIndex(index);
+        int32_t index = static_cast<int32_t>(m - values.GetData());
+        values.RemoveIndex(index);
     }
 
 private:
-    TArray<ArrayType> m_Values;
+    TArray<ArrayType> values;
 
     const ArrayType* FindValue(const KeyType& key) const
     {
-        uint64_t l = 0;
-        uint64_t r = m_Values.GetNumElements() - 1;
+        int32_t l = 0;
+        int32_t r = values.GetNumElements() - 1;
         Predicate pred{};
 
         while (l <= r)
         {
-            uint64_t m = l + (r - l) / 2;
+            int32_t m = l + (r - l) / 2;
 
             // Check if x is present at mid
-            if (m_Values[m].Key == key)
+            if (values[m].Key == key)
             {
-                return &m_Values[m];
+                return &values[m];
             }
 
             // If x greater, ignore left half
-            if (pred(m_Values[m].Key, key))
+            if (pred(values[m].Key, key))
             {
                 l = m + 1;
             }
@@ -216,9 +216,9 @@ struct DefaultHashFunctions
 template <typename KeyType, typename ValueType>
 struct THashMapElement
 {
-    TKeyValue<KeyType, ValueType> KeyValue;
-    int32_t NextIndex{IndexNone};
-    int32_t PrevIndex{IndexNone};
+    TKeyValue<KeyType, ValueType> keyValue;
+    int32_t nextIndex{IndexNone};
+    int32_t prevIndex{IndexNone};
 };
 
 template <typename MapType, typename KeyType, typename AllocatorType>
@@ -229,9 +229,9 @@ public:
     using KeyValueType = MapType::KeyValueType;
 
     TMapIterator(MapType& map, const TArray<KeyType, AllocatorType>& keys, int32_t index) :
-        m_Map{&map},
-        m_Keys(&keys),
-        m_Index(index)
+        map{&map},
+        keys(&keys),
+        index(index)
     {
     }
 
@@ -240,53 +240,53 @@ public:
 
     SelfClass operator++(int)
     {
-        return SelfClass{*m_Map, *m_Keys, m_Index + 1};
+        return SelfClass{*map, *keys, index + 1};
     }
 
     SelfClass& operator++()
     {
-        ++m_Index;
+        ++index;
         return *this;
     }
 
     KeyValueType& operator*()
     {
-        SDL_assert(m_Keys->IsValidIndex(m_Index));
-        return *m_Map->FindKeyValuePair(m_Keys->operator[](m_Index));
+        assert(keys->IsValidIndex(index));
+        return *map->FindKeyValuePair(keys->operator[](index));
     }
 
     const KeyValueType& operator*() const
     {
-        SDL_assert(m_Keys->IsValidIndex(m_Index));
-        return *m_Map->FindKeyValuePair(m_Keys->operator[](m_Index));
+        assert(keys->IsValidIndex(index));
+        return *map->FindKeyValuePair(keys->operator[](index));
     }
 
     KeyValueType* operator->()
     {
-        SDL_assert(m_Keys->IsValidIndex(m_Index));
-        return m_Map->FindKeyValuePair(m_Keys->operator[](m_Index));
+        assert(keys->IsValidIndex(index));
+        return map->FindKeyValuePair(keys->operator[](index));
     }
 
     const KeyValueType* operator->() const
     {
-        SDL_assert(m_Keys->IsValidIndex(m_Index));
-        return m_Map->FindKeyValuePair(m_Keys->operator[](m_Index));
+        assert(keys->IsValidIndex(index));
+        return map->FindKeyValuePair(keys->operator[](index));
     }
 
     bool operator==(const SelfClass& other) const
     {
-        return m_Index == other.m_Index;
+        return index == other.index;
     }
 
     bool operator!=(const SelfClass& other) const
     {
-        return m_Index != other.m_Index;
+        return index != other.index;
     }
 
 private:
-    MapType* m_Map;
-    const TArray<KeyType, AllocatorType>* m_Keys;
-    int32_t m_Index{0};
+    MapType* map;
+    const TArray<KeyType, AllocatorType>* keys;
+    int32_t index{0};
 };
 
 template <typename KeyType, typename ValueType, typename HashFunction = DefaultHashFunctions, typename EqualCompare = std::equal_to<KeyType>,
@@ -329,22 +329,22 @@ public:
 
         if (LookupIndex(key, index))
         {
-            m_Buckets[index].Value = value;
+            buckets[index].value = value;
         }
         else
         {
-            if (m_Keys.GetNumElements() + 1 > MaxLoadFactor() * m_Buckets.GetNumElements())
+            if (keys.GetNumElements() + 1 > MaxLoadFactor() * buckets.GetNumElements())
             {
                 Rehash();
             }
 
-            uint64_t hash = m_HashFunction(key);
-            int32_t pos = (int32_t)(hash % m_Buckets.GetNumAlloc());
+            uint64_t hash = hashFunction(key);
+            int32_t pos = static_cast<int32_t>(hash % buckets.GetNumAlloc());
 
-            m_Buckets.SetIndex(TKeyValue<KeyType, ValueType>{key, value}, pos);
-            m_Keys.Add(key);
+            buckets.SetIndex(TKeyValue<KeyType, ValueType>{key, value}, pos);
+            keys.Add(key);
 
-            m_Hashes[pos] = hash;
+            hashes[pos] = hash;
         }
     }
 
@@ -354,40 +354,40 @@ public:
 
         if (LookupIndex(key, index))
         {
-            m_Hashes[index] = 0;
-            m_Keys.Remove(key);
+            hashes[index] = 0;
+            keys.Remove(key);
         }
     }
 
     Iterator begin()
     {
-        return Iterator{*this, m_Keys, 0};
+        return Iterator{*this, keys, 0};
     }
 
     Iterator end()
     {
-        return Iterator{*this, m_Keys, m_Keys.GetNumElements()};
+        return Iterator{*this, keys, keys.GetNumElements()};
     }
 
     ConstIterator begin() const
     {
-        return ConstIterator{*this, m_Keys, 0};
+        return ConstIterator{*this, keys, 0};
     }
 
     ConstIterator end() const
     {
-        return ConstIterator{*this, m_Keys, m_Keys.GetNumElements()};
+        return ConstIterator{*this, keys, keys.GetNumElements()};
     }
 
     /* Returns key value pair or nullptr if couldn't be find. Key property must not be changed */
     TKeyValue<KeyType, ValueType>* FindKeyValuePair(const KeyType& key)
     {
-        uint64_t hash = m_HashFunction(key);
-        int32_t pos = (int32_t)(hash % m_Buckets.GetNumAlloc());
+        uint64_t hash = hashFunction(key);
+        int32_t pos = static_cast<int32_t>(hash % buckets.GetNumAlloc());
 
-        if (m_Hashes[pos] == hash && m_EqualCompare(key, m_Buckets[pos].Key))
+        if (hashes[pos] == hash && equalCompare(key, buckets[pos].Key))
         {
-            return &m_Buckets[pos];
+            return &buckets[pos];
         }
 
         return nullptr;
@@ -396,12 +396,12 @@ public:
     /* Returns key value pair or nullptr if couldn't be find. Key property must not be changed */
     const TKeyValue<KeyType, ValueType>* FindKeyValuePair(const KeyType& key) const
     {
-        uint64_t hash = m_HashFunction(key);
-        int32_t pos = (int32_t)(hash % m_Buckets.GetNumAlloc());
+        uint64_t hash = hashFunction(key);
+        int32_t pos = static_cast<int32_t>(hash % buckets.GetNumAlloc());
 
-        if (m_Hashes[pos] == hash && m_EqualCompare(key, m_Buckets[pos].Key))
+        if (hashes[pos] == hash && equalCompare(key, buckets[pos].Key))
         {
-            return &m_Buckets[pos];
+            return &buckets[pos];
         }
 
         return nullptr;
@@ -422,63 +422,63 @@ public:
     const ValueType& operator[](const KeyType& key) const
     {
         auto valuePtr = FindValue(key);
-        SDL_assert(valuePtr);
+        assert(valuePtr);
         return *valuePtr;
     }
 
     ValueType& operator[](const KeyType& key)
     {
         auto valuePtr = FindValue(key);
-        SDL_assert(valuePtr);
+        assert(valuePtr);
         return *valuePtr;
     }
 
     int32_t GetNumElements() const
     {
-        return m_Keys.GetNumElements();
+        return keys.GetNumElements();
     }
 
     template <typename OtherAllocatorType>
     void GetKeys(TArray<KeyType, OtherAllocatorType>& outKeys)
     {
-        outKeys.Append(m_Keys);
+        outKeys.Append(keys);
     }
 
     void Clear()
     {
-        for (auto& hash : m_Hashes)
+        for (auto& hash : hashes)
         {
             hash = 0;
         }
 
-        m_Keys.Empty();
+        keys.Empty();
     }
 
 private:
-    TArray<uint64_t, AllocatorType> m_Hashes;
-    TArray<TKeyValue<KeyType, ValueType>, AllocatorType> m_Buckets;
-    TArray<KeyType, AllocatorType> m_Keys;
+    TArray<uint64_t, AllocatorType> hashes;
+    TArray<TKeyValue<KeyType, ValueType>, AllocatorType> buckets;
+    TArray<KeyType, AllocatorType> keys;
 
-    HashFunction m_HashFunction;
-    EqualCompare m_EqualCompare;
+    HashFunction hashFunction;
+    EqualCompare equalCompare;
 
 private:
     bool LookupIndex(const KeyType& key, int32_t& outIndex) const
     {
-        if (m_Buckets.IsEmpty() || m_Keys.IsEmpty())
+        if (buckets.IsEmpty() || keys.IsEmpty())
         {
             return false;
         }
 
-        uint64_t hash = m_HashFunction(key);
-        int32_t pos = (int32_t)(hash % m_Buckets.GetNumAlloc());
+        uint64_t hash = hashFunction(key);
+        int32_t pos = static_cast<int32_t>(hash % buckets.GetNumAlloc());
 
-        if (m_Hashes[pos] == 0)
+        if (hashes[pos] == 0)
         {
             return false;
         }
 
-        if (m_Hashes[pos] == hash && m_EqualCompare(key, m_Buckets[pos].Key))
+        if (hashes[pos] == hash && equalCompare(key, buckets[pos].key))
         {
             outIndex = pos;
             return true;
@@ -489,31 +489,31 @@ private:
 
     void Rehash()
     {
-        TArray<uint64_t, AllocatorType> hashes;
-        TArray<TKeyValue<KeyType, ValueType>, AllocatorType> buckets;
+        TArray<uint64_t, AllocatorType> newHashes;
+        TArray<TKeyValue<KeyType, ValueType>, AllocatorType> newBuckets;
 
-        if (m_Buckets.IsEmpty())
+        if (buckets.IsEmpty())
         {
-            hashes.AddZeroed(16);
-            buckets.AddZeroed(16);
+            newHashes.AddZeroed(16);
+            newBuckets.AddZeroed(16);
         }
         else
         {
-            hashes.AddZeroed(m_Hashes.GetNumElements() * 2);
-            buckets.AddZeroed(m_Hashes.GetNumElements() * 2);
+            newHashes.AddZeroed(hashes.GetNumElements() * 2);
+            newBuckets.AddZeroed(buckets.GetNumElements() * 2);
         }
 
-        for (auto& v : m_Buckets)
+        for (auto& v : this->buckets)
         {
-            uint64_t hash = m_HashFunction(v.Key);
-            int32_t pos = (int32_t)(hash % buckets.GetNumAlloc());
+            uint64_t hash = hashFunction(v.key);
+            int32_t pos = static_cast<int32_t>(hash % newBuckets.GetNumAlloc());
 
-            hashes[pos] = hash;
-            buckets[pos] = v;
+            newHashes[pos] = hash;
+            newBuckets[pos] = v;
         }
 
-        m_Hashes = std::move(hashes);
-        m_Buckets = std::move(buckets);
+        hashes = std::move(newHashes);
+        buckets = std::move(newBuckets);
     }
 };
 

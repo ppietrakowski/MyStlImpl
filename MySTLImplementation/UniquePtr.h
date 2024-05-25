@@ -51,68 +51,68 @@ public:
     template <typename OtherPointerType, typename OtherDeleterType>
     TUniquePtr(TUniquePtr<OtherPointerType, OtherDeleterType>&& ptr) noexcept
     {
-        PointerType* p = static_cast<PointerType*>(std::exchange(ptr.m_CompressedPair.p, nullptr);
+        PointerType* p = static_cast<PointerType*>(std::exchange(ptr.compressedPair.p, nullptr);
 
-        m_CompressedPair = std::exchange(ptr.m_CompressedPair, TCompressedPair<PointerType*, DeleterType>{});
-        ptr.m_CompressedPair.p = nullptr;
-        m_CompressedPair.p = p;
+        compressedPair = std::exchange(ptr.compressedPair, TCompressedPair<PointerType*, DeleterType>{});
+        ptr.compressedPair.p = nullptr;
+        compressedPair.p = p;
     }
 
     template <typename OtherPointerType, typename OtherDeleterType>
     TUniquePtr& operator=(TUniquePtr<OtherPointerType, OtherDeleterType>&& ptr) noexcept
     {
-        PointerType* p = static_cast<PointerType*>(std::exchange(ptr.m_CompressedPair.p, nullptr);
+        PointerType* p = static_cast<PointerType*>(std::exchange(ptr.compressedPair.p, nullptr);
 
-        m_CompressedPair = std::exchange(ptr.m_CompressedPair, TCompressedPair<PointerType*, DeleterType>{});
-        ptr.m_CompressedPair.p = nullptr;
-        m_CompressedPair.p = p;
+        compressedPair = std::exchange(ptr.compressedPair, TCompressedPair<PointerType*, DeleterType>{});
+        ptr.compressedPair.p = nullptr;
+        compressedPair.p = p;
 
         return *this;
     }
 
     ~TUniquePtr() noexcept
     {
-        m_CompressedPair.InvokeDeleter();
+        compressedPair.InvokeDeleter();
     }
 
     PointerType* Get() const
     {
-        return m_CompressedPair.p;
+        return compressedPair.p;
     }
 
     operator bool() const
     {
-        return !!m_CompressedPair.p;
+        return !!compressedPair.p;
     }
 
     bool operator!() const
     {
-        return !m_CompressedPair.p;
+        return !compressedPair.p;
     }
 
     PointerType* Release()
     {
-        PointerType* p = m_CompressedPair.p;
-        m_CompressedPair.p = nullptr;
+        PointerType* p = compressedPair.p;
+        compressedPair.p = nullptr;
         return p;
     }
 
     void Reset(PointerType* p)
     {
-        m_CompressedPair.InvokeDeleter();
-        m_CompressedPair.p = p;
+        compressedPair.InvokeDeleter();
+        compressedPair.p = p;
     }
 
     PointerType* operator->() const
     {
-        return m_CompressedPair.p;
+        return compressedPair.p;
     }
 
     PointerType& operator*() const
     {
-        return m_CompressedPair.p;
+        return compressedPair.p;
     }
 
 private:
-    TCompressedPair<PointerType*, DeleterType> m_CompressedPair;
+    TCompressedPair<PointerType*, DeleterType> compressedPair;
 };

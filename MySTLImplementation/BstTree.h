@@ -5,35 +5,35 @@
 
 struct BstNode
 {
-    std::string Key;
-    int32_t Value = 0;
+    std::string key;
+    int32_t value = 0;
 
-    BstNode* Parent = nullptr;
-    BstNode* Left = nullptr;
-    BstNode* Right = nullptr;
+    BstNode* parent = nullptr;
+    BstNode* left = nullptr;
+    BstNode* right = nullptr;
 
     ~BstNode() noexcept
     {
         puts("Deleting node");
 
-        delete Right;
-        delete Left;
+        delete right;
+        delete left;
     }
 
     int32_t* Search(const std::string& Key) const
     {
-        if (Key == this->Key)
+        if (Key == this->key)
         {
-            return const_cast<int32_t*>(&Value);
+            return const_cast<int32_t*>(&value);
         }
 
-        if (Key < this->Key && Left)
+        if (Key < this->key && left)
         {
-            return Left->Search(Key);
+            return left->Search(Key);
         }
-        else if (Right)
+        else if (right)
         {
-            return Right->Search(Key);
+            return right->Search(Key);
         }
 
         return nullptr;
@@ -41,18 +41,18 @@ struct BstNode
 
     BstNode* SearchNode(const std::string& Key)
     {
-        if (Key == this->Key)
+        if (Key == this->key)
         {
             return this;
         }
 
-        if (Key < this->Key && Left)
+        if (Key < this->key && left)
         {
-            return Left->SearchNode(Key);
+            return left->SearchNode(Key);
         }
-        else if (Right)
+        else if (right)
         {
-            return Right->SearchNode(Key);
+            return right->SearchNode(Key);
         }
 
         return nullptr;
@@ -63,9 +63,9 @@ struct BstNode
     {
         BstNode* node = this;
 
-        while (node->Left != nullptr)
+        while (node->left != nullptr)
         {
-            node = node->Left;
+            node = node->left;
         }
 
         return node;
@@ -78,46 +78,46 @@ public:
     BinarySearchTree() = default;
     ~BinarySearchTree() noexcept
     {
-        delete m_Root;
+        delete root;
     }
 
     void Put(const std::string& key, int32_t value)
     {
-        if (!m_Root)
+        if (!root)
         {
-            m_Root = new BstNode();
-            m_Root->Key = key;
-            m_Root->Value = value;
+            root = new BstNode();
+            root->key = key;
+            root->value = value;
         }
         else
         {
-            BstNode* i = m_Root;
+            BstNode* i = root;
 
             while (true)
             {
-                if (i->Key < key)
+                if (i->key < key)
                 {
-                    if (!i->Right)
+                    if (!i->right)
                     {
-                        i->Right = new BstNode{key, value, i};
+                        i->right = new BstNode{key, value, i};
                         break;
                     }
 
-                    i = i->Right;
+                    i = i->right;
                 }
-                else if (i->Key > key)
+                else if (i->key > key)
                 {
-                    if (!i->Left)
+                    if (!i->left)
                     {
-                        i->Left = new BstNode{key, value, i};
+                        i->left = new BstNode{key, value, i};
                         break;
                     }
 
-                    i = i->Left;
+                    i = i->left;
                 }
                 else
                 {
-                    i->Value = value;
+                    i->value = value;
                     return;
                 }
             }
@@ -126,63 +126,63 @@ public:
 
     int32_t* Search(const std::string& key)
     {
-        return m_Root ? m_Root->Search(key) : nullptr;
+        return root ? root->Search(key) : nullptr;
     }
 
     const int32_t* Search(const std::string& key) const
     {
-        return m_Root ? m_Root->Search(key) : nullptr;
+        return root ? root->Search(key) : nullptr;
     }
 
     bool Remove(const std::string& key)
     {
-        if (!m_Root)
+        if (!root)
         {
             return false;
         }
 
-        if (!m_Root->Right && !m_Root->Left && m_Root->Key == key)
+        if (!root->right && !root->left && root->key == key)
         {
-            delete m_Root;
-            m_Root = nullptr;
+            delete root;
+            root = nullptr;
         }
 
-        BstNode* node = m_Root->SearchNode(key);
+        BstNode* node = root->SearchNode(key);
 
         if (!node)
         {
             return false;
         }
 
-        BstNode* successor = node->Left;
+        BstNode* successor = node->left;
 
-        if (node->Right)
+        if (node->right)
         {
-            successor = node->Right->FindInOrderSuccesor();
+            successor = node->right->FindInOrderSuccesor();
         }
 
         if (successor)
         {
-            node->Value = successor->Value;
-            node->Key = successor->Key;
+            node->value = successor->value;
+            node->key = successor->key;
         }
         else
         {
             successor = node;
         }
 
-        if (successor->Parent->Left == successor)
+        if (successor->parent->left == successor)
         {
-            successor->Parent->Left = nullptr;
+            successor->parent->left = nullptr;
         }
         else
         {
-            successor->Parent->Right = nullptr;
+            successor->parent->right = nullptr;
         }
 
         delete successor;
     }
 
 private:
-    BstNode* m_Root = nullptr;
+    BstNode* root = nullptr;
 };

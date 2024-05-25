@@ -136,6 +136,7 @@
     <ClInclude Include="Array.h" />
     <ClInclude Include="BstTree.h" />
     <ClInclude Include="Delegate.h" />
+    <ClInclude Include="DelegateImpl.h" />
     <ClInclude Include="EnumAsByte.h" />
     <ClInclude Include="FixedString.h" />
     <ClInclude Include="List.h" />

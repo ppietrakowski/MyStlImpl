@@ -1,168 +1,93 @@
 #pragma once
-
 #include "Delegate.h"
-#include <vector>
+#include "Array.h"
 
-template <typename>
-class TMulticastDelegate;
-
-
-template <typename TReturn, typename ...TArgs>
-class TMulticastDelegate<TReturn(TArgs...)>
+template <typename ...Args>
+class TMulticastDelegate
 {
 public:
-    using DelegateType = TDelegate<TReturn(TArgs...)>;
+    using DelegateType = TDelegate<void(Args...)>;
+    TMulticastDelegate() = default;
 
-    TMulticastDelegate();
-    TMulticastDelegate(TMulticastDelegate&& delegate) noexcept;
+    TMulticastDelegate(const TMulticastDelegate&) = default;
+    TMulticastDelegate& operator=(const TMulticastDelegate&) = default;
 
-    TMulticastDelegate& operator=(TMulticastDelegate&& delegate) noexcept;
+    TMulticastDelegate(TMulticastDelegate&&) noexcept = default;
+    TMulticastDelegate& operator=(TMulticastDelegate&&) noexcept = default;
 
-    void Notify(TArgs&& ...args);
+    void AddStatic(void(*function)(Args... args))
+    {
+        delegates.EmplaceBack(function);
+    }
 
-    void BindStaticFunction(TReturn(*fn)(TArgs ...args));
-    void UnbindStaticFunction(TReturn(*fn)(TArgs ...args));
+    void RemoveStatic(void(*function)(Args... args))
+    {
+        DelegateType del(function);
+        DeleteDelegate(del);
+    }
 
-    template <typename TObject>
-    void BindMemberFunction(TReturn(TObject::* fn)(TArgs...), TObject* target);
+    template <typename ObjectType>
+    void AddObjectRaw(void(ObjectType::* function)(Args... args), ObjectType& object)
+    {
+        delegates.EmplaceBack(function, object);
+    }
 
-    template <typename TObject>
-    void UnbindMemberFunction(TReturn(TObject::* fn)(TArgs...), TObject* target);
+    template <typename ObjectType>
+    void RemoveObjectRaw(void(ObjectType::* function)(Args... args), ObjectType& object)
+    {
+        DelegateType del(function, object);
+        DeleteDelegate(del);
+    }
 
-    template <typename TLambda>
-    void BindLambdaFunction(TLambda&& Lambda);
+    template <typename ObjectType>
+    void AddObjectSP(void(ObjectType::* function)(Args... args), std::shared_ptr<ObjectType> object)
+    {
+        delegates.EmplaceBack(function, object);
+    }
 
-    template <typename TLambda>
-    void UnbindLambdaFunction(TLambda&& Lambda);
+    template <typename ObjectType>
+    void RemoveObjectSP(void(ObjectType::* function)(Args... args), std::shared_ptr<ObjectType> object)
+    {
+        DelegateType del(function, object);
+        DeleteDelegate(del);
+    }
 
-    void Each(TDelegate<bool(TDelegate<TReturn(TArgs...)>&)> fn);
-    void EachRefDelegate(TDelegate<bool(TDelegate<TReturn(TArgs...)>&)>& fn);
+    template <typename LambdaType>
+    void AddLambda(LambdaType&& lambda)
+    {
+        delegates.Add(DelegateType().BindLambda(std::forward<LambdaType>(lambda)));
+    }
 
-    size_t GetNumOfDelegates() const;
+    template <typename LambdaType>
+    void RemoveLambda(LambdaType&& lambda)
+    {
+        DelegateType del(std::forward<LambdaType>(lambda));
+        DeleteDelegate(del);
+    }
+
+    void Broadcast(Args&& ...args)
+    {
+        for (auto& del : delegates)
+        {
+            del.Execute(std::forward<Args>(args)...);
+        }
+    }
+
+    int32_t GetNumDelegates() const
+    {
+        return delegates.GetNumElements();
+    }
 
 private:
-    std::vector<DelegateType> delegates;
+    TArray<DelegateType> delegates;
 
-    void RemoveDelegate(TDelegate<TReturn(TArgs...)>& del);
+private:
+    void DeleteDelegate(const DelegateType& del)
+    {
+        auto i = std::find(delegates.begin(), delegates.end(), del);
+        if (i != delegates.end())
+        {
+            delegates.erase(i);
+        }
+    }
 };
-
-template <typename>
-using Action = TMulticastDelegate<void()>;
-
-template class TMulticastDelegate<void()>;
-
-template <typename TReturn, typename ...TArgs>
-TMulticastDelegate<TReturn(TArgs...)>::TMulticastDelegate()
-{
-    delegates.reserve(32);
-}
-
-template <typename TReturn, typename ...TArgs>
-TMulticastDelegate<TReturn(TArgs...)>::TMulticastDelegate(TMulticastDelegate&& delegate) noexcept :
-    delegates(std::move(delegate.delegates))
-{
-}
-
-template <typename TReturn, typename ...TArgs>
-TMulticastDelegate<TReturn(TArgs...)>& TMulticastDelegate<TReturn(TArgs...)>::operator=(TMulticastDelegate&& delegate) noexcept
-{
-    delegates = std::move(delegate.delegates);
-    return *this;
-}
-
-template <typename TReturn, typename ...TArgs>
-void TMulticastDelegate<TReturn(TArgs...)>::Notify(TArgs&& ...args)
-{
-    for (size_t i = 0; i < delegates.size(); i++)
-    {
-        delegates[i].Invoke(std::forward<Args>(args)...);
-    }
-}
-
-template <typename TReturn, typename ...TArgs>
-void TMulticastDelegate<TReturn(TArgs...)>::BindStaticFunction(TReturn(*fn)(TArgs ...args))
-{
-    TDelegate<TReturn(TArgs...)> del(fn);
-    delegates.push_back(std::move(del));
-}
-
-template <typename TReturn, typename ...TArgs>
-void TMulticastDelegate<TReturn(TArgs...)>::UnbindStaticFunction(TReturn(*fn)(TArgs ...args))
-{
-    TDelegate<TReturn(TArgs...)> del(fn);
-
-    RemoveDelegate(del);
-}
-
-template <typename TReturn, typename ...TArgs>
-template <typename TObject>
-void TMulticastDelegate<TReturn(TArgs...)>::BindMemberFunction(TReturn(TObject::* fn)(TArgs...), TObject* target)
-{
-    TDelegate<TReturn(TArgs...)> del(fn, target);
-    delegates.push_back(std::move(del));
-}
-
-template <typename TReturn, typename ...TArgs>
-template <typename TObject>
-void TMulticastDelegate<TReturn(TArgs...)>::UnbindMemberFunction(TReturn(TObject::* fn)(TArgs...), TObject* target)
-{
-    TDelegate<TReturn(TArgs...)> del(fn, target);
-    RemoveDelegate(del);
-}
-
-template<typename TReturn, typename ...TArgs>
-template<typename TLambda>
-inline void TMulticastDelegate<TReturn(TArgs...)>::BindLambdaFunction(TLambda&& Lambda)
-{
-    TDelegate<TReturn(TArgs...)> del(Lambda);
-    delegates.push_back(std::move(del));
-}
-
-template<typename TReturn, typename ...TArgs>
-template<typename TLambda>
-inline void TMulticastDelegate<TReturn(TArgs...)>::UnbindLambdaFunction(TLambda&& Lambda)
-{
-    TDelegate<TReturn(TArgs...)> del = Lambda;
-    RemoveDelegate(del);
-}
-
-template<typename TReturn, typename ...TArgs>
-inline void TMulticastDelegate<TReturn(TArgs...)>::Each(TDelegate<bool(TDelegate<TReturn(TArgs...)>&)> fn)
-{
-    for (DelegateType& delegate : delegates)
-    {
-        if (!fn(delegate))
-        {
-            return;
-        }
-    }
-}
-
-template<typename TReturn, typename ...TArgs>
-inline void TMulticastDelegate<TReturn(TArgs...)>::EachRefDelegate(TDelegate<bool(TDelegate<TReturn(TArgs...)>&)>& fn)
-{
-    for (DelegateType& delegate : delegates)
-    {
-        if (!fn(delegate))
-        {
-            return;
-        }
-    }
-}
-
-template<typename TReturn, typename ...TArgs>
-inline size_t TMulticastDelegate<TReturn(TArgs...)>::GetNumOfDelegates() const
-{
-    return delegates.size();
-}
-
-template<typename TReturn, typename ...TArgs>
-inline void TMulticastDelegate<TReturn(TArgs...)>::RemoveDelegate(TDelegate<TReturn(TArgs...)>& del)
-{
-    auto it = std::remove(delegates.begin(), delegates.end(), del);
-
-    if (it != delegates.end())
-    {
-        delegates.erase(it);
-    }
-}

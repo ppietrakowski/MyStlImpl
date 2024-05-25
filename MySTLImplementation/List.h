@@ -5,22 +5,22 @@
 template <typename ElementType>
 struct TListNode
 {
-    ElementType Data;
-    TListNode<ElementType>* Next;
-    TListNode<ElementType>* Previous;
+    ElementType data;
+    TListNode<ElementType>* next;
+    TListNode<ElementType>* previous;
 
     template <typename ...Args>
     TListNode(Args&& ...args) :
-        Data(std::forward<Args>(args)...),
-        Next(nullptr),
-        Previous(nullptr)
+        data(std::forward<Args>(args)...),
+        next(nullptr),
+        previous(nullptr)
     {
     }
 
     template <typename ...Args>
     void Reset(Args&& ...args)
     {
-        Data = ElementType(std::forward<Args>(args)...);
+        data = ElementType(std::forward<Args>(args)...);
     }
 };
 
@@ -39,8 +39,8 @@ public:
     ElementType& operator*();
 
 private:
-    TListNode<ElementType>* m_CurrentNode;
-    int32_t m_Index;
+    TListNode<ElementType>* currentNode;
+    int32_t index;
 };
 
 template <typename ElementType>
@@ -58,8 +58,8 @@ public:
     const ElementType& operator*() const;
 
 private:
-    const TListNode<ElementType>* m_CurrentNode;
-    int32_t m_Index;
+    const TListNode<ElementType>* currentNode;
+    int32_t index;
 };
 
 template <typename ElementType>
@@ -110,8 +110,8 @@ public:
     TConstListIterator<ElementType> end() const;
 
 private:
-    TListNode<ElementType>* m_Root;
-    int32_t m_NumElements;
+    TListNode<ElementType>* root;
+    int32_t numElements;
 
 private:
     TListNode<ElementType>* GetNodeAt(int32_t index);
@@ -127,8 +127,8 @@ private:
 
 template<typename ElementType>
 inline TList<ElementType>::TList() :
-    m_Root(nullptr),
-    m_NumElements(0)
+    root(nullptr),
+    numElements(0)
 {
 }
 
@@ -169,24 +169,24 @@ inline TList<ElementType>::~TList() noexcept
 template<typename ElementType>
 inline void TList<ElementType>::Clear()
 {
-    if (m_Root != nullptr)
+    if (root != nullptr)
     {
-        TListNode<ElementType>* node = m_Root->Next;
+        TListNode<ElementType>* node = root->next;
 
         /* First delete all objects from range root->Next to root->Previous */
-        while (node != m_Root)
+        while (node != root)
         {
-            TListNode<ElementType>* temp = node->Next;
+            TListNode<ElementType>* temp = node->next;
             delete node;
             node = temp;
         }
 
         /* It is safe to just delete root */
-        delete m_Root;
+        delete root;
     }
 
-    m_Root = nullptr;
-    m_NumElements = 0;
+    root = nullptr;
+    numElements = 0;
 }
 
 template<typename ElementType>
@@ -216,7 +216,7 @@ inline void TList<ElementType>::InsertFront(const ElementType& data)
 template<typename ElementType>
 inline int32_t TList<ElementType>::Find(const ElementType& data) const
 {
-    TListNode<ElementType>* iterator = m_Root;
+    TListNode<ElementType>* iterator = root;
 
     if (IsEmpty())
     {
@@ -224,33 +224,33 @@ inline int32_t TList<ElementType>::Find(const ElementType& data) const
     }
 
     int32_t index = 0;
-    while (iterator->Next != m_Root)
+    while (iterator->next != root)
     {
-        if (iterator->Data == data)
+        if (iterator->data == data)
         {
             return index;
         }
 
         index++;
-        iterator = iterator->Next;
+        iterator = iterator->next;
     }
 
-    return nullptr;
+    return IndexNone;
 }
 
 template<typename ElementType>
 inline bool TList<ElementType>::Remove(const ElementType& data)
 {
-    TListNode<ElementType>* iterator = m_Root;
+    TListNode<ElementType>* iterator = root;
 
     if (IsEmpty())
     {
         return false;
     }
 
-    while (iterator != nullptr && iterator->Data != data)
+    while (iterator != nullptr && iterator->data != data)
     {
-        iterator = iterator->Next;
+        iterator = iterator->next;
     }
 
     if (iterator != nullptr)
@@ -265,16 +265,16 @@ inline bool TList<ElementType>::Remove(const ElementType& data)
 template<typename ElementType>
 inline bool TList<ElementType>::RemoveIf(const TDelegate<bool(const ElementType&)>& predicate)
 {
-    TListNode<ElementType>* iterator = m_Root;
+    TListNode<ElementType>* iterator = root;
 
     if (IsEmpty())
     {
         return false;
     }
 
-    while (iterator != nullptr && !predicate(iterator->Data))
+    while (iterator != nullptr && !predicate(iterator->data))
     {
-        iterator = iterator->Next;
+        iterator = iterator->next;
     }
 
     if (iterator != nullptr)
@@ -289,17 +289,17 @@ inline bool TList<ElementType>::RemoveIf(const TDelegate<bool(const ElementType&
 template<typename ElementType>
 inline bool TList<ElementType>::Contains(const ElementType& data) const
 {
-    TListNode<ElementType>* iterator = m_Root;
+    TListNode<ElementType>* iterator = root;
 
     while (true)
     {
-        if (iterator->Data == data)
+        if (iterator->data == data)
         {
             return true;
         }
 
-        iterator = iterator->Next;
-        if (iterator == m_Root)
+        iterator = iterator->next;
+        if (iterator == root)
         {
             break;
         }
@@ -312,44 +312,34 @@ template<typename ElementType>
 inline ElementType& TList<ElementType>::operator[](int32_t index)
 {
     TListNode<ElementType>* iterator = GetNodeAt(index);
-
-    if (!iterator)
-    {
-        throw std::runtime_error("Trying to access empty list");
-    }
-
-    return iterator->Data;
+    assert(iterator && "Trying to access empty list");
+    return iterator->data;
 }
 
 template<typename ElementType>
 inline const ElementType& TList<ElementType>::operator[](int32_t index) const
 {
     const TListNode<ElementType>* iterator = GetNodeAt(index);
-
-    if (!iterator)
-    {
-        throw std::runtime_error("Trying to access empty list");
-    }
-
-    return iterator->Data;
+    assert(iterator && "Trying to access empty list");
+    return iterator->data;
 }
 
 template<typename ElementType>
 inline int32_t TList<ElementType>::GetNumElements() const
 {
-    return m_NumElements;
+    return numElements;
 }
 
 template<typename ElementType>
 inline bool TList<ElementType>::IsEmpty() const
 {
-    return m_NumElements == 0;
+    return numElements == 0;
 }
 
 template<typename ElementType>
 inline TListIterator<ElementType> TList<ElementType>::begin()
 {
-    return TListIterator<ElementType>(m_Root, 0);
+    return TListIterator<ElementType>(root, 0);
 }
 
 template<typename ElementType>
@@ -360,13 +350,13 @@ inline TListIterator<ElementType> TList<ElementType>::end()
         return TListIterator<ElementType>(nullptr, 0);
     }
 
-    return TListIterator<ElementType>(m_Root->Previous, m_NumElements);
+    return TListIterator<ElementType>(root->previous, numElements);
 }
 
 template<typename ElementType>
 inline TConstListIterator<ElementType> TList<ElementType>::begin() const
 {
-    return TConstListIterator<ElementType>(m_Root, 0);
+    return TConstListIterator<ElementType>(root, 0);
 }
 
 template<typename ElementType>
@@ -377,52 +367,52 @@ inline TConstListIterator<ElementType> TList<ElementType>::end() const
         return TConstListIterator<ElementType>(nullptr, 0);
     }
 
-    return TConstListIterator<ElementType>(m_Root->Previous, m_NumElements);
+    return TConstListIterator<ElementType>(root->previous, numElements);
 }
 
 template<typename ElementType>
 inline TListNode<ElementType>* TList<ElementType>::GetNodeAt(int32_t index)
 {
-    if (index >= m_NumElements)
+    if (index >= numElements)
     {
         return nullptr;
     }
 
     if (index == 0)
     {
-        return m_Root;
+        return root;
     }
 
     // check to from which iterator is easier to find object
-    if (index > m_NumElements / 2)
+    if (index > numElements / 2)
     {
-        TListNode<ElementType>* iterator = m_Root->Previous;
-        int32_t tempIndex = m_NumElements - 1;
+        TListNode<ElementType>* iterator = root->previous;
+        int32_t tempIndex = numElements - 1;
 
-        while (iterator != m_Root)
+        while (iterator != root)
         {
             if (tempIndex == index)
             {
                 return iterator;
             }
 
-            iterator = iterator->Previous;
+            iterator = iterator->previous;
             tempIndex--;
         }
     }
     else
     {
-        TListNode<ElementType>* iterator = m_Root->Next;
+        TListNode<ElementType>* iterator = root->next;
         int32_t tempIndex = 1;
 
-        while (iterator != m_Root)
+        while (iterator != root)
         {
             if (tempIndex == index)
             {
                 return iterator;
             }
 
-            iterator = iterator->Next;
+            iterator = iterator->next;
             tempIndex++;
         }
     }
@@ -433,46 +423,46 @@ inline TListNode<ElementType>* TList<ElementType>::GetNodeAt(int32_t index)
 template<typename ElementType>
 inline const TListNode<ElementType>* TList<ElementType>::GetNodeAt(int32_t index) const
 {
-    if (index >= m_NumElements)
+    if (index >= numElements)
     {
         return nullptr;
     }
 
     if (index == 0)
     {
-        return m_Root;
+        return root;
     }
 
     // check to from which iterator is easier to find object
-    if (index > m_NumElements / 2)
+    if (index > numElements / 2)
     {
-        TListNode<ElementType>* iterator = m_Root->Previous;
-        int32_t tempIndex = m_NumElements - 1;
+        TListNode<ElementType>* iterator = root->previous;
+        int32_t tempIndex = numElements - 1;
 
-        while (iterator != m_Root)
+        while (iterator != root)
         {
             if (tempIndex == index)
             {
                 return iterator;
             }
 
-            iterator = iterator->Previous;
+            iterator = iterator->previous;
             tempIndex--;
         }
     }
     else
     {
-        TListNode<ElementType>* iterator = m_Root->Next;
+        TListNode<ElementType>* iterator = root->next;
         int32_t tempIndex = 1;
 
-        while (iterator != m_Root)
+        while (iterator != root)
         {
             if (tempIndex == index)
             {
                 return iterator;
             }
 
-            iterator = iterator->Next;
+            iterator = iterator->next;
             tempIndex++;
         }
     }
@@ -483,66 +473,66 @@ inline const TListNode<ElementType>* TList<ElementType>::GetNodeAt(int32_t index
 template<typename ElementType>
 inline void TList<ElementType>::InsertNodeAtFront(TListNode<ElementType>* node)
 {
-    node->Next = m_Root;
-    node->Previous = m_Root->Previous;
-    m_Root->Previous->Next = node;
-    m_Root->Previous = node;
-    m_Root = node;
-    ++m_NumElements;
+    node->next = root;
+    node->previous = root->previous;
+    root->previous->next = node;
+    root->previous = node;
+    root = node;
+    ++numElements;
 }
 
 template<typename ElementType>
 inline void TList<ElementType>::InsertNodeAtBack(TListNode<ElementType>* node)
 {
-    m_Root->Previous->Next = node;
-    node->Previous = m_Root->Previous;
-    node->Next = m_Root;
-    m_Root->Previous = node;
+    root->previous->next = node;
+    node->previous = root->previous;
+    node->next = root;
+    root->previous = node;
 
-    ++m_NumElements;
+    ++numElements;
 }
 
 template<typename ElementType>
 inline void TList<ElementType>::UnlinkFromHierarchy(TListNode<ElementType>* iterator)
 {
-    TListNode<ElementType>* prevNode = iterator->Previous;
-    TListNode<ElementType>* nextNode = iterator->Next;
+    TListNode<ElementType>* prevNode = iterator->previous;
+    TListNode<ElementType>* nextNode = iterator->next;
 
-    prevNode->Next = nextNode;
-    nextNode->Previous = prevNode;
+    prevNode->next = nextNode;
+    nextNode->previous = prevNode;
 
-    bool isIteratorSameAsRoot = iterator == m_Root;
+    bool isIteratorSameAsRoot = iterator == root;
 
     delete iterator;
 
     if (isIteratorSameAsRoot)
     {
-        m_Root = prevNode;
+        root = prevNode;
     }
 
-    --m_NumElements;
+    --numElements;
 
-    if (m_NumElements == 0)
+    if (numElements == 0)
     {
-        m_Root = nullptr;
+        root = nullptr;
     }
 }
 
 template<typename ElementType>
 inline void TList<ElementType>::AssignNewHierarchy(TListNode<ElementType>* root)
 {
-    this->m_Root = root;
-    this->m_Root->Next = this->m_Root;
-    this->m_Root->Previous = this->m_Root;
-    m_NumElements = 1;
+    this->root = root;
+    this->root->next = this->root;
+    this->root->previous = this->root;
+    numElements = 1;
 }
 
 template<typename ElementType>
 template<typename IteratorType>
 inline TList<ElementType>::TList(IteratorType begin, IteratorType end)
 {
-    m_NumElements = 0;
-    m_Root = nullptr;
+    numElements = 0;
+    root = nullptr;
 
     for (auto it = begin; it != end; ++it)
     {
@@ -577,78 +567,78 @@ inline void TList<ElementType>::EmplaceBack(Args && ...args)
 
 template <typename ElementType>
 inline TListIterator<ElementType>::TListIterator(TListNode<ElementType>* node, int32_t index) :
-    m_CurrentNode{node},
-    m_Index{index}
+    currentNode{node},
+    index{index}
 {
 }
 
 template <typename ElementType>
 inline bool TListIterator<ElementType>::operator==(const TListIterator<ElementType>& otherIterator) const
 {
-    return m_Index == otherIterator.m_Index;
+    return index == otherIterator.index;
 }
 
 template <typename ElementType>
 inline bool TListIterator<ElementType>::operator!=(const TListIterator<ElementType>& otherIterator) const
 {
-    return m_Index != otherIterator.m_Index;
+    return index != otherIterator.index;
 }
 
 template<typename ElementType>
 inline TListIterator<ElementType>& TListIterator<ElementType>::operator++()
 {
-    ++m_Index;
-    m_CurrentNode = m_CurrentNode->Next;
+    ++index;
+    currentNode = currentNode->next;
     return *this;
 }
 
 template <typename ElementType>
 inline TListIterator<ElementType> TListIterator<ElementType>::operator++(int32_t)
 {
-    return TListIterator<ElementType>(m_CurrentNode->Next, m_Index + 1);
+    return TListIterator<ElementType>(currentNode->next, index + 1);
 }
 
 template <typename ElementType>
 inline ElementType& TListIterator<ElementType>::operator*()
 {
-    return m_CurrentNode->Data;
+    return currentNode->data;
 }
 
 template<typename ElementType>
 inline TConstListIterator<ElementType>::TConstListIterator(const TListNode<ElementType>* node, int32_t i) :
-    m_CurrentNode(node),
-    m_Index(i)
+    currentNode(node),
+    index(i)
 {
 }
 
 template <typename ElementType>
 inline bool TConstListIterator<ElementType>::operator==(const TConstListIterator<ElementType>& otherIterator) const
 {
-    return m_Index == otherIterator.m_Index;
+    return index == otherIterator.index;
 }
 
 template <typename ElementType>
 inline bool TConstListIterator<ElementType>::operator!=(const TConstListIterator<ElementType>& otherIterator) const
 {
-    return m_Index != otherIterator.m_Index;
+    return index != otherIterator.index;
 }
 
 template<typename ElementType>
 inline TConstListIterator<ElementType>& TConstListIterator<ElementType>::operator++()
 {
-    ++m_Index;
-    m_CurrentNode = m_CurrentNode->Next;
+    ++index;
+    currentNode = currentNode->next;
     return *this;
 }
 
 template <typename ElementType>
 inline TConstListIterator<ElementType> TConstListIterator<ElementType>::operator++(int32_t)
 {
-    return TConstListIterator<ElementType>(m_CurrentNode->Next, m_Index + 1);
+    return TConstListIterator<ElementType>(currentNode->next, index + 1);
 }
 
 template <typename ElementType>
 inline const ElementType& TConstListIterator<ElementType>::operator*() const
 {
-    return m_CurrentNode->Data;
+    return currentNode->data;
 }

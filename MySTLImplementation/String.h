@@ -20,14 +20,14 @@ public:
 
     String(const String& str)
     {
-        m_Data.Empty();
-        m_Data.Append(str.m_Data);
+        data.Empty();
+        data.Append(str.data);
     }
 
     String& operator=(const String& str)
     {
-        m_Data.Empty();
-        m_Data.Append(str.m_Data);
+        data.Empty();
+        data.Append(str.data);
 
         return *this;
     }
@@ -56,14 +56,14 @@ public:
 
     int32_t GetLength() const
     {
-        return m_Data.GetNumElements();
+        return data.GetNumElements();
     }
 
     uint64_t GetHashCode() const;
 
     const char* GetData() const
     {
-        return m_Data.GetData();
+        return data.GetData();
     }
 
     void Clear();
@@ -107,8 +107,9 @@ public:
     }
 
 private:
-    CharContainer m_Data;
+    CharContainer data;
 
+private:
     void CopyFrom(const char* str, int32_t length);
 
     template <typename T>
@@ -119,14 +120,14 @@ private:
             return IndexNone;
         }
 
-        const int32_t len = m_Data.GetNumElements();
+        const int32_t len = data.GetNumElements();
 
         if (srcLen == 0 || len == 0)
         {
             return IndexNone; // won't find anything!
         }
 
-        const char* src = m_Data.GetData();
+        const char* src = data.GetData();
 
         for (int32_t i = startOffset; i <= (len - srcLen); i++)
         {
@@ -160,7 +161,7 @@ private:
     int32_t RFindImpl(const T* str, int32_t srcLen, int32_t endOffset) const
     {
         // establish a limit
-        int32_t limit = m_Data.GetNumElements() - srcLen;
+        int32_t limit = data.GetNumElements() - srcLen;
 
         if (limit < 0)
         {
@@ -177,14 +178,14 @@ private:
             endOffset = limit;
         }
 
-        int32_t len = m_Data.GetNumElements();
+        int32_t len = data.GetNumElements();
 
         if (srcLen == 0 || len == 0)
         {
             return -1; // won't find anything!
         }
 
-        const char* src = m_Data.GetData();
+        const char* src = data.GetData();
 
         for (int32_t i = endOffset; i >= 0; i--)
         {
