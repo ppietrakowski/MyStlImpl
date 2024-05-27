@@ -84,10 +84,6 @@ private:
 private:
     void DeleteDelegate(const DelegateType& del)
     {
-        auto i = std::find(m_Delegates.begin(), m_Delegates.end(), del);
-        if (i != m_Delegates.end())
-        {
-            m_Delegates.erase(i);
-        }
+        m_Delegates.Remove(del);
     }
 };
