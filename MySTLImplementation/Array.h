@@ -70,8 +70,8 @@ public:
     }
 
     TArrayIterator(ContainerType& container, int32_t index) :
-        container(&container),
-        index(index)
+        m_Container(&container),
+        m_Index(index)
     {
     }
 
@@ -80,36 +80,36 @@ public:
 
     bool operator==(const SelfIterator& iterator)
     {
-        return iterator.container == container && iterator.index == index;
+        return iterator.m_Container == m_Container && iterator.m_Index == m_Index;
     }
 
     bool operator!=(const SelfIterator& iterator)
     {
-        return iterator.container != container || iterator.index != index;
+        return iterator.m_Container != m_Container || iterator.m_Index != m_Index;
     }
 
     ValueType& operator*() const
     {
         assert(HasValidIndex());
-        return (*container)[index];
+        return (*m_Container)[m_Index];
     }
 
     ValueType& operator*()
     {
         assert(HasValidIndex());
-        return (*container)[index];
+        return (*m_Container)[m_Index];
     }
 
     ValueType* operator->() const
     {
         assert(HasValidIndex());
-        return container->GetData() + index;
+        return m_Container->GetData() + m_Index;
     }
 
     SelfIterator& operator++()
     {
         assert(HasValidIndex());
-        ++index;
+        ++m_Index;
 
         return *this;
     }
@@ -117,7 +117,7 @@ public:
     SelfIterator& operator--()
     {
         assert(HasValidIndex());
-        --index;
+        --m_Index;
 
         return *this;
     }
@@ -125,31 +125,31 @@ public:
     SelfIterator operator++(int)
     {
         assert(HasValidIndex());
-        SelfIterator it{container, index + 1};
+        SelfIterator it{m_Container, m_Index + 1};
         return it;
     }
 
     SelfIterator operator--(int)
     {
         assert(HasValidIndex());
-        SelfIterator it{container, index - 1};
+        SelfIterator it{m_Container, m_Index - 1};
         return it;
     }
 
     bool HasValidIndex()const
     {
-        return index >= 0 && index < container->GetNumElements();
+        return m_Index >= 0 && m_Index < m_Container->GetNumElements();
     }
 
     int32_t GetIndex() const
     {
-        return index;
+        return m_Index;
     }
 
 private:
 
-    ContainerType* container;
-    int32_t index;
+    ContainerType* m_Container;
+    int32_t m_Index;
 };
 
 template <typename ElementType, typename AllocatorType = DefaultAllocator>
