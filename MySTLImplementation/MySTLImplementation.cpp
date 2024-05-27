@@ -101,6 +101,7 @@ int main()
     devices.EmplaceBack();
     devices.EmplaceBack();
 
+    TArray<FVideoMode> devices2 = devices;
 
     for (auto& dev : devices)
     {

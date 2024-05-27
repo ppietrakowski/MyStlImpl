@@ -195,6 +195,30 @@ public:
         }
     }
 
+    TArray(const TArray<ElementType>& elements) :
+        m_Data{nullptr},
+        m_NumElements{0},
+        m_NumAlloc{0}
+    {
+        AllocAbs(elements.GetNumElements());
+        for (auto& elementType : elements)
+        {
+            EmplaceBack(elementType);
+        }
+    }
+
+    TArray& operator=(const TArray<ElementType>& elements)
+    {
+        Empty();
+        AllocAbs(elements.GetNumElements());
+        for (auto& elementType : elements)
+        {
+            EmplaceBack(elementType);
+        }
+
+        return *this;
+    }
+
     TArray(TArray<ElementType, AllocatorType>&& elements) noexcept
     {
         m_Data = std::exchange(elements.m_Data, nullptr);
@@ -352,10 +376,10 @@ public:
             m_Allocator.ConstructElement(&data[i], std::move(data[i]));
         }
 
-        m_Allocator.DestroyRange(this->m_Data, this->m_Data + m_NumElements);
-        m_Allocator.Free(this->m_Data);
+        m_Allocator.DestroyRange(m_Data, m_Data + m_NumElements);
+        m_Allocator.Free(m_Data);
 
-        this->m_Data = data;
+        m_Data = data;
         m_NumAlloc = newCapacity;
     }
 
@@ -437,7 +461,7 @@ public:
         m_Allocator.DestroyRange(data, data + m_NumElements);
         m_Allocator.Free(data);
 
-        data = data;
+        m_Data = data;
         m_NumAlloc = newCapacity;
     }
 
