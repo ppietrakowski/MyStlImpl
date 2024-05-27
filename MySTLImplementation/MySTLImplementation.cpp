@@ -138,6 +138,9 @@ int main()
     TMap<int, int> map;
     map.Insert(10, 10);
     map.Insert(60, 10);
+
+    TUniquePtr<Dog> ptr = new Dog{};
+    TUniquePtr<IAnimal> animalv2 = std::move(ptr);
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu

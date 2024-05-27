@@ -37,10 +37,19 @@ struct TCompressedPair : private EmptyType
 template <typename PointerType, typename DeleterType = TDefaultDeleter<PointerType>>
 class TUniquePtr
 {
+    template <typename OtherPointerType, typename OtherDeleterType>
+    friend class TUniquePtr;
+
 public:
     using SelfClass = TUniquePtr<PointerType, DeleterType>;
 
     TUniquePtr() = default;
+
+    TUniquePtr(PointerType* pointer):
+        m_CompressedPair()
+    {
+        m_CompressedPair.Ptr = pointer;
+    }
 
     template <typename OtherDeleterType>
     TUniquePtr(const TUniquePtr<PointerType, OtherDeleterType>&) = delete;
@@ -53,6 +62,13 @@ public:
     {
         PointerType* p = static_cast<PointerType*>(std::exchange(ptr.m_CompressedPair.Ptr, nullptr));
 
+        ptr.m_CompressedPair.Ptr = nullptr;
+        m_CompressedPair.Ptr = p;
+    }
+
+    TUniquePtr(TUniquePtr&& ptr) noexcept
+    {
+        PointerType* p = static_cast<PointerType*>(std::exchange(ptr.m_CompressedPair.Ptr, nullptr));
         m_CompressedPair = std::exchange(ptr.m_CompressedPair, TCompressedPair<PointerType*, DeleterType>{});
         ptr.m_CompressedPair.Ptr = nullptr;
         m_CompressedPair.Ptr = p;
@@ -63,10 +79,18 @@ public:
     {
         PointerType* p = static_cast<PointerType*>(std::exchange(ptr.m_CompressedPair.Ptr, nullptr));
 
-        m_CompressedPair = std::exchange(ptr.m_CompressedPair, TCompressedPair<PointerType*, DeleterType>{});
         ptr.m_CompressedPair.Ptr = nullptr;
         m_CompressedPair.Ptr = p;
 
+        return *this;
+    }
+
+    TUniquePtr& operator=(TUniquePtr&& ptr) noexcept
+    {
+        PointerType* p = static_cast<PointerType*>(std::exchange(ptr.m_CompressedPair.Ptr, nullptr));
+        m_CompressedPair = std::exchange(ptr.m_CompressedPair, TCompressedPair<PointerType*, DeleterType>{});
+        ptr.m_CompressedPair.Ptr = nullptr;
+        m_CompressedPair.Ptr = p;
         return *this;
     }
 
