@@ -5,54 +5,54 @@
 
 struct BstNode
 {
-    std::string key;
-    int32_t value = 0;
+    std::string Key;
+    int32_t Value = 0;
 
-    BstNode* parent = nullptr;
-    BstNode* left = nullptr;
-    BstNode* right = nullptr;
+    BstNode* Parent = nullptr;
+    BstNode* Left = nullptr;
+    BstNode* Right = nullptr;
 
     ~BstNode() noexcept
     {
         puts("Deleting node");
 
-        delete right;
-        delete left;
+        delete Right;
+        delete Left;
     }
 
-    int32_t* Search(const std::string& Key) const
+    int32_t* Search(const std::string& key) const
     {
-        if (Key == this->key)
+        if (key == this->Key)
         {
-            return const_cast<int32_t*>(&value);
+            return const_cast<int32_t*>(&Value);
         }
 
-        if (Key < this->key && left)
+        if (key < this->Key && Left)
         {
-            return left->Search(Key);
+            return Left->Search(key);
         }
-        else if (right)
+        else if (Right)
         {
-            return right->Search(Key);
+            return Right->Search(key);
         }
 
         return nullptr;
     }
 
-    BstNode* SearchNode(const std::string& Key)
+    BstNode* SearchNode(const std::string& key)
     {
-        if (Key == this->key)
+        if (key == this->Key)
         {
             return this;
         }
 
-        if (Key < this->key && left)
+        if (key < this->Key && Left)
         {
-            return left->SearchNode(Key);
+            return Left->SearchNode(key);
         }
-        else if (right)
+        else if (Right)
         {
-            return right->SearchNode(Key);
+            return Right->SearchNode(key);
         }
 
         return nullptr;
@@ -63,9 +63,9 @@ struct BstNode
     {
         BstNode* node = this;
 
-        while (node->left != nullptr)
+        while (node->Left != nullptr)
         {
-            node = node->left;
+            node = node->Left;
         }
 
         return node;
@@ -78,46 +78,46 @@ public:
     BinarySearchTree() = default;
     ~BinarySearchTree() noexcept
     {
-        delete root;
+        delete m_Root;
     }
 
     void Put(const std::string& key, int32_t value)
     {
-        if (!root)
+        if (!m_Root)
         {
-            root = new BstNode();
-            root->key = key;
-            root->value = value;
+            m_Root = new BstNode();
+            m_Root->Key = key;
+            m_Root->Value = value;
         }
         else
         {
-            BstNode* i = root;
+            BstNode* i = m_Root;
 
             while (true)
             {
-                if (i->key < key)
+                if (i->Key < key)
                 {
-                    if (!i->right)
+                    if (!i->Right)
                     {
-                        i->right = new BstNode{key, value, i};
+                        i->Right = new BstNode{key, value, i};
                         break;
                     }
 
-                    i = i->right;
+                    i = i->Right;
                 }
-                else if (i->key > key)
+                else if (i->Key > key)
                 {
-                    if (!i->left)
+                    if (!i->Left)
                     {
-                        i->left = new BstNode{key, value, i};
+                        i->Left = new BstNode{key, value, i};
                         break;
                     }
 
-                    i = i->left;
+                    i = i->Left;
                 }
                 else
                 {
-                    i->value = value;
+                    i->Value = value;
                     return;
                 }
             }
@@ -126,63 +126,63 @@ public:
 
     int32_t* Search(const std::string& key)
     {
-        return root ? root->Search(key) : nullptr;
+        return m_Root ? m_Root->Search(key) : nullptr;
     }
 
     const int32_t* Search(const std::string& key) const
     {
-        return root ? root->Search(key) : nullptr;
+        return m_Root ? m_Root->Search(key) : nullptr;
     }
 
     bool Remove(const std::string& key)
     {
-        if (!root)
+        if (!m_Root)
         {
             return false;
         }
 
-        if (!root->right && !root->left && root->key == key)
+        if (!m_Root->Right && !m_Root->Left && m_Root->Key == key)
         {
-            delete root;
-            root = nullptr;
+            delete m_Root;
+            m_Root = nullptr;
         }
 
-        BstNode* node = root->SearchNode(key);
+        BstNode* node = m_Root->SearchNode(key);
 
         if (!node)
         {
             return false;
         }
 
-        BstNode* successor = node->left;
+        BstNode* successor = node->Left;
 
-        if (node->right)
+        if (node->Right)
         {
-            successor = node->right->FindInOrderSuccesor();
+            successor = node->Right->FindInOrderSuccesor();
         }
 
         if (successor)
         {
-            node->value = successor->value;
-            node->key = successor->key;
+            node->Value = successor->Value;
+            node->Key = successor->Key;
         }
         else
         {
             successor = node;
         }
 
-        if (successor->parent->left == successor)
+        if (successor->Parent->Left == successor)
         {
-            successor->parent->left = nullptr;
+            successor->Parent->Left = nullptr;
         }
         else
         {
-            successor->parent->right = nullptr;
+            successor->Parent->Right = nullptr;
         }
 
         delete successor;
     }
 
 private:
-    BstNode* root = nullptr;
+    BstNode* m_Root = nullptr;
 };

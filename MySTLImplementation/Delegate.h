@@ -15,39 +15,39 @@ public:
 
     TDelegate() = default;
     TDelegate(StaticFunctionType function) :
-        delegate(storage.NewDelegate<impl::TStaticDelegate<RetValue, Args...>>(function))
+        m_Delegate(m_Storage.NewDelegate<impl::TStaticDelegate<RetValue, Args...>>(function))
     {
     }
 
     template <typename ObjectType>
     TDelegate(RetValue(ObjectType::* function)(Args... args), ObjectType& object) :
-        delegate(storage.NewDelegate<impl::TMemberDelegate<ObjectType, RetValue, Args...>>(function, object))
+        m_Delegate(m_Storage.NewDelegate<impl::TMemberDelegate<ObjectType, RetValue, Args...>>(function, object))
     {
     }
 
     template <typename ObjectType>
     TDelegate(RetValue(ObjectType::* function)(Args... args), std::shared_ptr<ObjectType> object) :
-        delegate(storage.NewDelegate<impl::TSPMemberDelegate<ObjectType, RetValue, Args...>>(function, object))
+        m_Delegate(m_Storage.NewDelegate<impl::TSPMemberDelegate<ObjectType, RetValue, Args...>>(function, object))
     {
     }
 
     template <typename LambdaType>
     SelfClass& BindLambda(LambdaType&& lambda)
     {
-        delegate = storage.NewDelegate<impl::TLambdaDelegate<LambdaType, RetValue, Args...>>(std::forward<LambdaType>(lambda));
+        m_Delegate = m_Storage.NewDelegate<impl::TLambdaDelegate<LambdaType, RetValue, Args...>>(std::forward<LambdaType>(lambda));
         return *this;
     }
 
     TDelegate(const SelfClass& copy)
     {
-        copy.CloneTo(storage);
-        delegate = storage.GetDelegatePtr<DelegateBaseClass>();
+        copy.CloneTo(m_Storage);
+        m_Delegate = m_Storage.GetDelegatePtr<DelegateBaseClass>();
     }
 
     TDelegate& operator=(const SelfClass& copy)
     {
-        copy.CloneTo(storage);
-        delegate = storage.GetDelegatePtr<DelegateBaseClass>();
+        copy.CloneTo(m_Storage);
+        m_Delegate = m_Storage.GetDelegatePtr<DelegateBaseClass>();
         return *this;
     }
 
@@ -55,24 +55,24 @@ public:
 
     RetValue Execute(Args&& ...args) const
     {
-        assert(delegate);
-        return delegate->Execute(std::forward<Args>(args)...);
+        assert(m_Delegate);
+        return m_Delegate->Execute(std::forward<Args>(args)...);
     }
 
     RetValue ExecuteIfBound(Args&& ...args) const
     {
         if constexpr (std::is_void_v<RetValue>)
         {
-            if (delegate)
+            if (m_Delegate)
             {
-                delegate->Execute(std::forward<Args>(args)...);
+                m_Delegate->Execute(std::forward<Args>(args)...);
             }
         }
         else
         {
-            if (delegate)
+            if (m_Delegate)
             {
-                return delegate->Execute(std::forward<Args>(args)...);
+                return m_Delegate->Execute(std::forward<Args>(args)...);
             }
 
             return RetValue{};
@@ -81,14 +81,14 @@ public:
 
     RetValue operator()(Args&& ...args) const
     {
-        assert(delegate);
-        return delegate->Execute(std::forward<Args>(args)...);
+        assert(m_Delegate);
+        return m_Delegate->Execute(std::forward<Args>(args)...);
     }
 
     bool Equals(const SelfClass& other) const
     {
-        assert(delegate && other.delegate);
-        return other.delegate->Equals(*delegate);
+        assert(m_Delegate && other.m_Delegate);
+        return other.m_Delegate->Equals(*m_Delegate);
     }
 
     bool operator==(const SelfClass& other) const
@@ -103,7 +103,7 @@ public:
 
     bool IsBound() const
     {
-        return delegate != nullptr;
+        return m_Delegate != nullptr;
     }
 
     operator bool() const
@@ -118,10 +118,10 @@ public:
 
 private:
     /* Storage typed erase (stack size equal to max of sizes of all kinds of delegate types) */
-    impl::DelegateStorage storage;
+    impl::DelegateStorage m_Storage;
 
     /* Cached delegate for faster access to  */
-    DelegateBaseClass* delegate{nullptr};
+    DelegateBaseClass* m_Delegate{nullptr};
 
 private:
     void CloneTo(impl::DelegateStorage& storage) const

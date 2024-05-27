@@ -64,6 +64,11 @@ class TArrayIterator
 public:
     using SelfIterator = TArrayIterator<ContainerType, ValueType>;
 
+    constexpr static bool IsContigous()
+    {
+        return true;
+    }
+
     TArrayIterator(ContainerType& container, int32_t index) :
         container(&container),
         index(index)
@@ -161,25 +166,25 @@ public:
     using ConstIterator = TArrayIterator<const SelfClass, ConstValueType>;
 
     TArray() :
-        data{nullptr},
-        numElements{0},
-        numAlloc{0}
+        m_Data{nullptr},
+        m_NumElements{0},
+        m_NumAlloc{0}
     {
     }
 
     TArray(std::initializer_list<ElementType> elements) :
-        data{nullptr},
-        numElements{0},
-        numAlloc{0}
+        m_Data{nullptr},
+        m_NumElements{0},
+        m_NumAlloc{0}
     {
         Append(elements);
     }
 
     template <typename OtherElementType, typename OtherAllocator>
     TArray(const TArray<OtherElementType, OtherAllocator>& elements) :
-        data{nullptr},
-        numElements{0},
-        numAlloc{0}
+        m_Data{nullptr},
+        m_NumElements{0},
+        m_NumAlloc{0}
     {
         static_assert(std::is_convertible_v<OtherElementType, ElementType>, "OtherElementType must be convertible to ElementType");
 
@@ -192,18 +197,18 @@ public:
 
     TArray(TArray<ElementType, AllocatorType>&& elements) noexcept
     {
-        data = std::exchange(elements.data, nullptr);
-        numElements = std::exchange(elements.numElements, 0);
-        numAlloc = std::exchange(elements.numAlloc, 0);
-        allocator = std::exchange(elements.allocator, AllocatorType{});
+        m_Data = std::exchange(elements.m_Data, nullptr);
+        m_NumElements = std::exchange(elements.m_NumElements, 0);
+        m_NumAlloc = std::exchange(elements.m_NumAlloc, 0);
+        m_Allocator = std::exchange(elements.m_Allocator, AllocatorType{});
     }
 
     TArray& operator=(TArray<ElementType, AllocatorType>&& elements) noexcept
     {
-        data = std::exchange(elements.data, nullptr);
-        numElements = std::exchange(elements.numElements, 0);
-        numAlloc = std::exchange(elements.numAlloc, 0);
-        allocator = std::exchange(elements.allocator, AllocatorType{});
+        m_Data = std::exchange(elements.m_Data, nullptr);
+        m_NumElements = std::exchange(elements.m_NumElements, 0);
+        m_NumAlloc = std::exchange(elements.m_NumAlloc, 0);
+        m_Allocator = std::exchange(elements.m_Allocator, AllocatorType{});
 
         return *this;
     }
@@ -211,7 +216,7 @@ public:
     ~TArray() noexcept
     {
         Empty();
-        allocator.Free(data);
+        m_Allocator.Free(m_Data);
     }
 
     template <typename ...Args>
@@ -219,15 +224,15 @@ public:
     {
         TryExpand();
 
-        allocator.ConstructElement(&data[numElements], std::forward<Args>(args)...);
-        numElements++;
+        m_Allocator.ConstructElement(&m_Data[m_NumElements], std::forward<Args>(args)...);
+        m_NumElements++;
     }
 
     void SetIndex(const ElementType& element, int32_t index)
     {
         if (IsValidIndex(index))
         {
-            data[index] = element;
+            m_Data[index] = element;
         }
     }
 
@@ -235,20 +240,20 @@ public:
     {
         if (IsValidIndex(index))
         {
-            data[index] = std::move(element);
+            m_Data[index] = std::move(element);
         }
     }
 
     template <typename ...Args>
     void EmplaceAt(int32_t index, Args&& ...args)
     {
-        assert(index >= 0 && index < numElements);
+        assert(index >= 0 && index < m_NumElements);
         TryExpand();
 
-        std::move(&data[index], &data[numElements], &data[index + 1]);
-        allocator.ConstructElement(&data[index], std::forward<Args>(args)...);
+        std::move(&m_Data[index], &m_Data[m_NumElements], &m_Data[index + 1]);
+        m_Allocator.ConstructElement(&m_Data[index], std::forward<Args>(args)...);
 
-        numElements++;
+        m_NumElements++;
     }
 
     void PushBack(const ElementType& element)
@@ -264,21 +269,21 @@ public:
     int32_t Add(const ElementType& element)
     {
         EmplaceBack(element);
-        return numElements - 1;
+        return m_NumElements - 1;
     }
 
     int32_t Add(ElementType&& element)
     {
         EmplaceBack(std::move(element));
-        return numElements - 1;
+        return m_NumElements - 1;
     }
 
     void AddZeroed(int32_t numZeroed)
     {
-        AllocAbs(numElements + numZeroed + 1);
+        AllocAbs(m_NumElements + numZeroed);
 
-        allocator.ConstructDefaultRange(&data[numElements], &data[numElements + numZeroed]);
-        numElements += numZeroed;
+        m_Allocator.ConstructDefaultRange(&m_Data[m_NumElements], &m_Data[m_NumElements + numZeroed]);
+        m_NumElements += numZeroed;
     }
 
     int32_t AddUnique(const ElementType& elementType)
@@ -295,14 +300,14 @@ public:
 
     int32_t AddUnique(ElementType&& elementType)
     {
-        auto i = std::find(data, data + numElements, elementType);
+        auto i = std::find(m_Data, m_Data + m_NumElements, elementType);
 
-        if (i == data + numElements)
+        if (i == m_Data + m_NumElements)
         {
             return Add(std::move(elementType));
         }
 
-        return (int32_t)std::distance(data, i);
+        return (int32_t)std::distance(m_Data, i);
     }
 
     void Append(std::initializer_list<ElementType> type)
@@ -312,7 +317,7 @@ public:
 
     void Append(const ElementType* data, int32_t size)
     {
-        AllocAbs(numElements + size);
+        AllocAbs(m_NumElements + size);
 
         for (int32_t i = 0; i < size; ++i)
         {
@@ -324,7 +329,7 @@ public:
     template <typename OtherElementType, typename OtherAllocator>
     void Append(const TArray<OtherElementType, OtherAllocator>& elements)
     {
-        AllocAbs(numElements + elements.GetNumElements());
+        AllocAbs(m_NumElements + elements.GetNumElements());
 
         for (const OtherElementType& element : elements)
         {
@@ -339,46 +344,46 @@ public:
             return;
         }
 
-        int32_t newCapacity = delta + numAlloc;
-        ElementType* data = (ElementType*)allocator.Allocate(newCapacity * sizeof(ElementType));
+        int32_t newCapacity = delta + m_NumAlloc;
+        ElementType* data = (ElementType*)m_Allocator.Allocate(newCapacity * sizeof(ElementType));
 
-        for (int32_t i = 0; i < numElements; ++i)
+        for (int32_t i = 0; i < m_NumElements; ++i)
         {
-            allocator.ConstructElement(&data[i], std::move(data[i]));
+            m_Allocator.ConstructElement(&data[i], std::move(data[i]));
         }
 
-        allocator.DestroyRange(this->data, this->data + numElements);
-        allocator.Free(this->data);
+        m_Allocator.DestroyRange(this->m_Data, this->m_Data + m_NumElements);
+        m_Allocator.Free(this->m_Data);
 
-        this->data = data;
-        numAlloc = newCapacity;
+        this->m_Data = data;
+        m_NumAlloc = newCapacity;
     }
 
     void AllocAbs(int32_t abs)
     {
-        AllocDelta(abs - numAlloc);
+        AllocDelta(abs - m_NumAlloc);
     }
 
     int32_t GetNumElements() const
     {
-        return numElements;
+        return m_NumElements;
     }
 
     int32_t GetNumAlloc() const
     {
-        return numAlloc;
+        return m_NumAlloc;
     }
 
     int32_t GetSizeBytes() const
     {
-        return numElements * sizeof(ElementType);
+        return m_NumElements * sizeof(ElementType);
     }
 
     int32_t FindIndexOf(const ElementType& type) const
     {
-        for (int32_t i = 0; i < numElements; ++i)
+        for (int32_t i = 0; i < m_NumElements; ++i)
         {
-            if (data[i] == type)
+            if (m_Data[i] == type)
             {
                 return i;
             }
@@ -390,9 +395,9 @@ public:
     template <typename Predicate>
     int32_t FindIndexOfByPredicate(Predicate&& predicate) const
     {
-        for (int32_t i = 0; i < numElements; ++i)
+        for (int32_t i = 0; i < m_NumElements; ++i)
         {
-            if (predicate(data[i]))
+            if (predicate(m_Data[i]))
             {
                 return i;
             }
@@ -416,32 +421,32 @@ public:
 
     void ShrinkToFit()
     {
-        if (numElements == numAlloc)
+        if (m_NumElements == m_NumAlloc)
         {
             return;
         }
 
-        int32_t newCapacity = numElements;
-        ElementType* data = (ElementType*)allocator.Allocate(newCapacity * sizeof(ElementType));
+        int32_t newCapacity = m_NumElements;
+        ElementType* data = (ElementType*)m_Allocator.Allocate(newCapacity * sizeof(ElementType));
 
-        for (int32_t i = 0; i < numElements; ++i)
+        for (int32_t i = 0; i < m_NumElements; ++i)
         {
-            allocator.ConstructElement(&data[i], std::move(data[i]));
+            m_Allocator.ConstructElement(&data[i], std::move(data[i]));
         }
 
-        allocator.DestroyRange(data, data + numElements);
-        allocator.Free(data);
+        m_Allocator.DestroyRange(data, data + m_NumElements);
+        m_Allocator.Free(data);
 
         data = data;
-        numAlloc = newCapacity;
+        m_NumAlloc = newCapacity;
     }
 
     void RemoveIndex(int32_t index)
     {
-        assert(index >= 0 && index < numElements);
+        assert(index >= 0 && index < m_NumElements);
 
-        std::move(&data[index + 1], &data[numElements], &data[index]);
-        numElements--;
+        std::move(&m_Data[index + 1], &m_Data[m_NumElements], &m_Data[index]);
+        m_NumElements--;
     }
 
     void Remove(const ElementType& type)
@@ -451,31 +456,31 @@ public:
 
     ElementType* GetData()
     {
-        return data;
+        return m_Data;
     }
 
     const ElementType* GetData() const
     {
-        return data;
+        return m_Data;
     }
 
     bool IsEmpty() const
     {
-        return numElements == 0;
+        return m_NumElements == 0;
     }
 
     void Empty()
     {
-        allocator.DestroyRange(data, data + numElements);
-        numElements = 0;
+        m_Allocator.DestroyRange(m_Data, m_Data + m_NumElements);
+        m_NumElements = 0;
     }
 
     void swap(TArray<ElementType, AllocatorType>& array)
     {
-        data = std::exchange(array.data, data);
-        numElements = std::exchange(array.numElements, numElements);
-        numAlloc = std::exchange(array.numAlloc, numAlloc);
-        allocator = std::exchange(array.allocator, allocator);
+        m_Data = std::exchange(array.m_Data, m_Data);
+        m_NumElements = std::exchange(array.m_NumElements, m_NumElements);
+        m_NumAlloc = std::exchange(array.m_NumAlloc, m_NumAlloc);
+        m_Allocator = std::exchange(array.m_Allocator, m_Allocator);
     }
 
     Iterator begin()
@@ -490,48 +495,49 @@ public:
 
     Iterator end()
     {
-        return Iterator{*this, numElements};
+        return Iterator{*this, m_NumElements};
     }
 
     ConstIterator end() const
     {
-        return ConstIterator{*this, numElements};
+        return ConstIterator{*this, m_NumElements};
     }
 
     bool IsValidIndex(int32_t index) const
     {
-        return index >= 0 && index < numElements;
+        return index >= 0 && index < m_NumElements;
     }
 
     ElementType& operator[](int32_t index)
     {
         assert(IsValidIndex(index));
-        return data[index];
+        return m_Data[index];
     }
 
     const ElementType& operator[](int32_t index) const
     {
         assert(IsValidIndex(index));
-        return data[index];
+        return m_Data[index];
     }
 
     template <typename Predicate = std::less<ElementType>>
     void Sort(Predicate&& predicate)
     {
-        std::sort(data, data + numElements, predicate);
+        std::sort(m_Data, m_Data + m_NumElements, predicate);
     }
 
 private:
-    ElementType* data;
-    int32_t numElements;
-    int32_t numAlloc;
-    AllocatorType allocator;
+    ElementType* m_Data;
+    int32_t m_NumElements;
+    int32_t m_NumAlloc;
+    AllocatorType m_Allocator;
 
+private:
     void TryExpand()
     {
-        if (numElements >= numAlloc)
+        if (m_NumElements >= m_NumAlloc)
         {
-            int32_t cap = numAlloc + numAlloc / 2;
+            int32_t cap = m_NumAlloc + m_NumAlloc / 2;
             if (cap == 0)
             {
                 cap = 16;
@@ -683,3 +689,4 @@ struct Enforce_same
 
 template <class _First, class... _Rest>
 TStaticArray(_First, _Rest...) -> TStaticArray<typename Enforce_same<_First, _Rest...>::type, 1 + sizeof...(_Rest)>;
+

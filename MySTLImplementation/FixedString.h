@@ -112,20 +112,20 @@ public:
 
     char& back() const
     {
-        assert(strlength > 0); return strbuffer[strlength - 1];
+        assert(m_Length > 0); return m_String[m_Length - 1];
     }
     char& front() const
     {
-        return strbuffer[0];
+        return m_String[0];
     }
 
     operator std::string() const
     {
-        return std::string(&strbuffer[0]);
+        return std::string(&m_String[0]);
     }
     operator std::string_view() const
     {
-        return std::string_view(&strbuffer[0]);
+        return std::string_view(&m_String[0]);
     }
 
     bool operator==(const char* str) const;
@@ -165,7 +165,7 @@ public:
     uint64_t hash_code() const
     {
         /* simple djb2 hashing */
-        const char* it = strbuffer;
+        const char* it = m_String;
         uint64_t hashv = 5381;
         uint64_t c = *it++;
 
@@ -179,8 +179,8 @@ public:
     }
 
 private:
-    char strbuffer[N + 1];
-    uint64_t strlength;
+    char m_String[N + 1];
+    size_t m_Length;
 };
 
 namespace std
@@ -220,14 +220,14 @@ namespace cstring
 template<size_t N>
 inline void CString<N>::clear()
 {
-    memset(&strbuffer[0], 0, sizeof(strbuffer));
-    strlength = 0;
+    memset(&m_String[0], 0, sizeof(m_String));
+    m_Length = 0;
 }
 
 template<size_t N>
 inline size_t CString<N>::size() const
 {
-    return strlength;
+    return m_Length;
 }
 
 template<size_t N>
@@ -239,31 +239,31 @@ inline constexpr size_t CString<N>::capacity() const
 template<size_t N>
 inline size_t CString<N>::length() const
 {
-    return strlength;
+    return m_Length;
 }
 
 template<size_t N>
 inline const char* CString<N>::begin() const
 {
-    return &strbuffer[0];
+    return &m_String[0];
 }
 
 template<size_t N>
 inline const char* CString<N>::end() const
 {
-    return &strbuffer[strlength];
+    return &m_String[m_Length];
 }
 
 template<size_t N>
 inline char* CString<N>::begin()
 {
-    return &strbuffer[0];
+    return &m_String[0];
 }
 
 template<size_t N>
 inline char* CString<N>::end()
 {
-    return &strbuffer[strlength];
+    return &m_String[m_Length];
 }
 
 template<size_t N>
@@ -274,31 +274,31 @@ inline CString<N>& CString<N>::operator=(const CString<N>& str)
         return *this;
     }
 
-    strncpy(strbuffer, str.strbuffer, N);
+    strncpy(m_String, str.m_String, N);
 
     // always ensure it contains trailing zero
-    strbuffer[N] = 0;
-    strlength = strlen(strbuffer);
+    m_String[N] = 0;
+    m_Length = strlen(m_String);
     return *this;
 }
 
 template<size_t N>
 inline CString<N>& CString<N>::operator=(const char* str)
 {
-    strncpy(strbuffer, str, N);
+    strncpy(m_String, str, N);
 
     // always ensure it contains trailing zero
-    strbuffer[N] = 0;
-    strlength = strlen(strbuffer);
+    m_String[N] = 0;
+    m_Length = strlen(m_String);
     return *this;
 }
 
 template<size_t N>
 inline CString<N>& CString<N>::operator=(const std::string& str)
 {
-    strncpy(strbuffer, str.c_str(), N);
-    strbuffer[N] = 0;
-    strlength = strlen(strbuffer);
+    strncpy(m_String, str.c_str(), N);
+    m_String[N] = 0;
+    m_Length = strlen(m_String);
     return *this;
 }
 
@@ -306,65 +306,65 @@ template<size_t N>
 inline char& CString<N>::operator[](size_t i)
 {
     assert(i < N && "CString out of range");
-    return strbuffer[i];
+    return m_String[i];
 }
 
 template<size_t N>
 inline const char& CString<N>::operator[](size_t i) const
 {
     assert(i < N && "CString out of range");
-    return strbuffer[i];
+    return m_String[i];
 }
 
 template<size_t N>
 inline const char* CString<N>::c_str() const
 {
-    return &strbuffer[0];
+    return &m_String[0];
 }
 
 template<size_t N>
 inline char* CString<N>::data()
 {
-    return &strbuffer[0];
+    return &m_String[0];
 }
 
 template<size_t N>
 inline const char* CString<N>::data() const
 {
-    return &strbuffer[0];
+    return &m_String[0];
 }
 
 template<size_t N>
 inline CString<N> CString<N>::substr(size_t offset, size_t n) const
 {
     CString<N> str;
-    strncpy(str.strbuffer, strbuffer + offset, n);
-    str.strbuffer[N] = 0;
-    str.strlength = strlen(str.strbuffer);
+    strncpy(str.m_String, m_String + offset, n);
+    str.m_String[N] = 0;
+    str.m_Length = strlen(str.m_String);
     return str;
 }
 
 template<size_t N>
 inline bool CString<N>::empty() const
 {
-    return strlength == 0;
+    return m_Length == 0;
 }
 
 template<size_t N>
 inline size_t CString<N>::find(const char* str) const
 {
-    if (strlength == 0)
+    if (m_Length == 0)
     {
         return InvalidPos;
     }
 
-    const char* foundAt = strstr(strbuffer, str);
+    const char* foundAt = strstr(m_String, str);
     if (foundAt == nullptr)
     {
         return InvalidPos;
     }
 
-    return static_cast<size_t>(foundAt - strbuffer);
+    return static_cast<size_t>(foundAt - m_String);
 }
 
 template<size_t N>
@@ -382,18 +382,18 @@ inline size_t CString<N>::find(const CString<N>& str) const
 template<size_t N>
 inline size_t CString<N>::rfind(const char* str) const
 {
-    if (strlength == 0)
+    if (m_Length == 0)
     {
         return InvalidPos;
     }
 
-    const char* foundAt = cstring::LastSubstring(strbuffer, str);
+    const char* foundAt = cstring::LastSubstring(m_String, str);
     if (foundAt == nullptr)
     {
         return InvalidPos;
     }
 
-    return static_cast<size_t>(foundAt - strbuffer);
+    return static_cast<size_t>(foundAt - m_String);
 }
 
 template<size_t N>
@@ -405,24 +405,24 @@ inline size_t CString<N>::rfind(const std::string& str) const
 template<size_t N>
 inline size_t CString<N>::rfind(const CString<N>& str) const
 {
-    return rfind(str.strbuffer);
+    return rfind(str.m_String);
 }
 
 template<size_t N>
 inline size_t CString<N>::find_first_of(const char* str) const
 {
-    if (strlength == 0)
+    if (m_Length == 0)
     {
         return InvalidPos;
     }
 
-    const char* foundAt = strpbrk(strbuffer, str);
+    const char* foundAt = strpbrk(m_String, str);
     if (foundAt == nullptr)
     {
         return InvalidPos;
     }
 
-    return static_cast<size_t>(foundAt - strbuffer);
+    return static_cast<size_t>(foundAt - m_String);
 }
 
 template<size_t N>
@@ -434,7 +434,7 @@ inline size_t CString<N>::find_first_of(const std::string& str) const
 template<size_t N>
 inline size_t CString<N>::find_first_of(const CString<N>& str) const
 {
-    return find_first_of(str.strbuffer);
+    return find_first_of(str.m_String);
 }
 
 template<size_t N>
@@ -442,14 +442,14 @@ inline size_t CString<N>::find_first_not_of(const char* control) const
 {
     const char* const baseControl = control;
 
-    for (const char& c : strbuffer)
+    for (const char& c : m_String)
     {
         control = baseControl;
         while (control && *control)
         {
             if (c != *control)
             {
-                size_t posOfFound = static_cast<size_t>(&c - &strbuffer[0]);
+                size_t posOfFound = static_cast<size_t>(&c - &m_String[0]);
                 return posOfFound;
             }
             control++;
@@ -468,24 +468,24 @@ inline size_t CString<N>::find_first_not_of(const std::string& str) const
 template<size_t N>
 inline size_t CString<N>::find_first_not_of(const CString<N>& str) const
 {
-    return find_first_not_of(str.strbuffer);
+    return find_first_not_of(str.m_String);
 }
 
 template<size_t N>
 inline size_t CString<N>::find_last_of(const char* str) const
 {
-    if (strlength == 0)
+    if (m_Length == 0)
     {
         return InvalidPos;
     }
 
-    const char* foundAt = cstring::FindLastOf(strbuffer, str);
+    const char* foundAt = cstring::FindLastOf(m_String, str);
     if (foundAt == nullptr)
     {
         return InvalidPos;
     }
 
-    return static_cast<size_t>(foundAt - strbuffer);
+    return static_cast<size_t>(foundAt - m_String);
 }
 
 template<size_t N>
@@ -497,7 +497,7 @@ inline size_t CString<N>::find_last_of(const std::string& str) const
 template<size_t N>
 inline size_t CString<N>::find_last_of(const CString<N>& str) const
 {
-    return find_last_of(str.strbuffer);
+    return find_last_of(str.m_String);
 }
 
 template<size_t N>
@@ -505,16 +505,16 @@ inline size_t CString<N>::find_not_last_of(const char* str) const
 {
     const char* const baseStr = str;
 
-    for (int64_t n = strlength - 1; n >= 0; n--)
+    for (int64_t n = m_Length - 1; n >= 0; n--)
     {
         str = baseStr;
 
-        const char& c = strbuffer[n];
+        const char& c = m_String[n];
         while (str && *str)
         {
             if (c != *str)
             {
-                size_t posOfFound = static_cast<size_t>(&c - &strbuffer[0]);
+                size_t posOfFound = static_cast<size_t>(&c - &m_String[0]);
                 return posOfFound;
             }
             str++;
@@ -531,13 +531,13 @@ inline size_t CString<N>::find_not_last_of(const std::string& str) const
 template<size_t N>
 inline size_t CString<N>::find_not_last_of(const CString<N>& str) const
 {
-    return find_not_last_of(str.strbuffer);
+    return find_not_last_of(str.m_String);
 }
 
 template<size_t N>
 inline void CString<N>::tokenize(const char* delimiter, std::vector<CString<N>>& outTokens) const
 {
-    char* foundAt = strtok(strbuffer, delimiter);
+    char* foundAt = strtok(m_String, delimiter);
 
     while (foundAt != nullptr)
     {
@@ -549,24 +549,24 @@ inline void CString<N>::tokenize(const char* delimiter, std::vector<CString<N>>&
 template<size_t N>
 inline void CString<N>::pop_back()
 {
-    assert(strlength > 0 && "Nothing to pop");
-    strlength -= 1;
-    strbuffer[strlength] = 0;
+    assert(m_Length > 0 && "Nothing to pop");
+    m_Length -= 1;
+    m_String[m_Length] = 0;
 }
 
 template<size_t N>
 inline void CString<N>::push_back(char c)
 {
-    if (strlength < N - 1)
+    if (m_Length < N - 1)
     {
-        strbuffer[strlength++] = c;
+        m_String[m_Length++] = c;
     }
 }
 
 template<size_t N>
 inline int32_t CString<N>::compare(const char* other) const
 {
-    return strcmp(strbuffer, other);
+    return strcmp(m_String, other);
 }
 
 template<size_t N>
@@ -578,7 +578,7 @@ inline int32_t CString<N>::compare(const std::string& other) const
 template<size_t N>
 inline int32_t CString<N>::compare(const CString<N>& other) const
 {
-    return compare(other.strbuffer);
+    return compare(other.m_String);
 }
 
 template<size_t N>
@@ -602,8 +602,8 @@ inline bool CString<N>::operator==(const std::string& str) const
 template<size_t N>
 inline CString<N>::CString()
 {
-    memset(&strbuffer[0], 0, sizeof(strbuffer));
-    strlength = 0;
+    memset(&m_String[0], 0, sizeof(m_String));
+    m_Length = 0;
 }
 
 template<size_t N>
@@ -615,17 +615,17 @@ inline CString<N>::CString(const CString<N>& str)
 template<size_t N>
 inline CString<N>::CString(const char* str)
 {
-    strncpy(strbuffer, str, N);
-    strbuffer[N] = 0;
-    strlength = strlen(strbuffer);
+    strncpy(m_String, str, N);
+    m_String[N] = 0;
+    m_Length = strlen(m_String);
 }
 
 template<size_t N>
 inline CString<N>::CString(const std::string& str)
 {
-    strncpy(strbuffer, str.c_str(), N);
-    strbuffer[N] = 0;
-    strlength = strlen(strbuffer);
+    strncpy(m_String, str.c_str(), N);
+    m_String[N] = 0;
+    m_Length = strlen(m_String);
 }
 
 template<size_t N>
@@ -645,14 +645,14 @@ inline CString<N>& CString<N>::append(const char* str, size_t n)
 {
     assert(n <= strlen(str));
 
-    if (strlength + n >= N)
+    if (m_Length + n >= N)
     {
-        n = N - strlength;
+        n = N - m_Length;
     }
 
-    strncat(strbuffer + strlength, str, n);
-    strbuffer[N] = 0;
-    strlength = strlen(strbuffer);
+    strncat(m_String + m_Length, str, n);
+    m_String[N] = 0;
+    m_Length = strlen(m_String);
     return *this;
 }
 
@@ -664,14 +664,14 @@ inline CString<N>& CString<N>::append(const char* str, size_t offset, size_t n)
         n = strlen(str);
     }
 
-    if (strlength + n >= N)
+    if (m_Length + n >= N)
     {
-        n = N - strlength;
+        n = N - m_Length;
     }
 
-    strncat(strbuffer + strlength, str + offset, n);
-    strbuffer[N] = 0;
-    strlength = strlen(strbuffer);
+    strncat(m_String + m_Length, str + offset, n);
+    m_String[N] = 0;
+    m_Length = strlen(m_String);
     return *this;
 }
 
@@ -684,7 +684,7 @@ inline CString<N>& CString<N>::append(const std::string& str)
 template<size_t N>
 inline CString<N>& CString<N>::append(const CString<N>& str)
 {
-    return append(str.strbuffer);
+    return append(str.m_String);
 }
 
 template<size_t N>
@@ -732,13 +732,13 @@ inline CString<N>& CString<N>::append(double value)
 template<size_t N>
 inline void CString<N>::copy(char* buffer, size_t maxBufferSize) const
 {
-    if (maxBufferSize >= strlength)
+    if (maxBufferSize >= m_Length)
     {
-        strcpy(buffer, strbuffer);
+        strcpy(buffer, m_String);
     }
     else
     {
-        strncpy(buffer, strbuffer, maxBufferSize);
+        strncpy(buffer, m_String, maxBufferSize);
     }
 
     buffer[maxBufferSize - 1] = 0;
@@ -757,8 +757,8 @@ inline void CString<N>::sprintf(const char* format, ...)
 template<size_t N>
 inline void CString<N>::vsprintf(const char* format, va_list list)
 {
-    ::vsnprintf(strbuffer, N, format, list);
-    strbuffer[N] = 0;
+    ::vsnprintf(m_String, N, format, list);
+    m_String[N] = 0;
 }
 
 template<size_t N>
@@ -774,7 +774,7 @@ template<size_t N>
 inline void CString<N>::vback_sprintf(const char* format, va_list list)
 {
     CString<N> tempBuffer;
-    ::vsnprintf(tempBuffer.strbuffer, N, format, list);
+    ::vsnprintf(tempBuffer.m_String, N, format, list);
     append(tempBuffer);
 }
 

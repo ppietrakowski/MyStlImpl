@@ -68,5 +68,8 @@
     <ClInclude Include="DelegateImpl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="InlineStorage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

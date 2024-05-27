@@ -34,49 +34,23 @@ private:
     ElementType* element;
 };
 
-template <typename ElementType>
-class TConstSpanIterator
+template <typename IteratorType>
+struct TContigousStorage
 {
-public:
-    TConstSpanIterator(const ElementType* element) :
-        element(element)
+    constexpr static bool IsContigous()
     {
+        return IteratorType::IsContigous();
     }
-
-    TConstSpanIterator(const TConstSpanIterator<ElementType>&) = default;
-
-    const ElementType& operator*() const
-    {
-        return *element;
-    }
-
-    bool operator==(const TConstSpanIterator<ElementType>& it) const
-    {
-        return it.element == element;
-    }
-
-    bool operator!=(const TConstSpanIterator<ElementType>& it) const
-    {
-        return it.element != element;
-    }
-
-private:
-    const ElementType* element;
 };
 
 template <typename ElementType>
 class TSpan
 {
 public:
+
     TSpan() :
         data(nullptr),
         size(0)
-    {
-    }
-
-    TSpan(TArray<ElementType>& array) :
-        data(array.GetData()),
-        size(array.GetNumElements())
     {
     }
 
@@ -84,6 +58,17 @@ public:
         data(array),
         size(size)
     {
+    }
+
+    template <typename IteratorType>
+    TSpan(IteratorType begin, IteratorType end)
+    {
+        using ContigousStorageTrait = TContigousStorage<ElementType>;
+        static_assert(ContigousStorageTrait::IsContigous());
+
+        data = &(*begin);
+        ElementType* e = &(*end);
+        size = int32_t(e - data);
     }
 
     TSpan(const TSpan<ElementType>&) = default;
@@ -97,42 +82,23 @@ public:
         return TSpanIterator<ElementType>(data + size);
     }
 
-    TConstSpanIterator<ElementType> begin() const
+    ElementType& operator[](int32_t i) const
     {
-        return TConstSpanIterator<ElementType>(data);
-    }
-    TConstSpanIterator<ElementType> end() const
-    {
-        return TConstSpanIterator<ElementType>(data + size);
-    }
-
-    ElementType& operator[](int32_t i)
-    {
-        assert(i >= 0 && i < size); 
+        assert(i >= 0 && i < size);
         return data[i];
     }
 
-    const ElementType& operator[](int32_t i) const
-    {
-        assert(i >= 0 && i < size); 
-        return data[i];
-    }
-
-    int32_t GetNumBytes() const
+    intptr_t GetNumBytes() const
     {
         return size * sizeof(ElementType);
     }
 
-    int32_t GetNum() const
+    int32_t GetNumElements() const
     {
         return size;
     }
 
-    ElementType* GetData()
-    {
-        return data;
-    }
-    const ElementType* GetData() const
+    ElementType* GetData() const
     {
         return data;
     }

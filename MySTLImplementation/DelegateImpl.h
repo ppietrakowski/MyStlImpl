@@ -39,28 +39,28 @@ namespace impl
         using Super = TDelegateBase<RetValue, Args...>;
 
         TStaticDelegate(StaticFunctionType function) :
-            function(function)
+            m_Function(function)
         {
         }
 
         TStaticDelegate(const SelfClass* del) :
-            function(del->function)
+            m_Function(del->m_Function)
         {
         }
 
         RetValue Execute(Args&& ...args) const override
         {
-            return function(std::forward<Args>(args)...);
+            return m_Function(std::forward<Args>(args)...);
         }
 
         bool Equals(const IDelegateBase& other) override
         {
             const SelfClass* del = dynamic_cast<const SelfClass*>(&other);
-            return del && del->function == function;
+            return del && del->m_Function == m_Function;
         }
 
     private:
-        StaticFunctionType function;
+        StaticFunctionType m_Function;
     };
 
     template <typename ObjectType, typename RetValue, typename ...Args>
@@ -73,31 +73,31 @@ namespace impl
         using Super = TDelegateBase<RetValue, Args...>;
 
         TMemberDelegate(MemberFunctionType function, ObjectType& object) :
-            object(&object),
-            function(function)
+            m_Object(&object),
+            m_Function(function)
         {
         }
 
         TMemberDelegate(const SelfClass* del) :
-            object(del->object),
-            function(del->function)
+            m_Object(del->m_Object),
+            m_Function(del->m_Function)
         {
         }
 
         RetValue Execute(Args&& ...args) const override
         {
-            return (object->*function)(std::forward<Args>(args)...);
+            return (m_Object->*m_Function)(std::forward<Args>(args)...);
         }
 
         bool Equals(const IDelegateBase& other) override
         {
             const SelfClass* del = dynamic_cast<const SelfClass*>(&other);
-            return del && del->function == function && del->object == object;
+            return del && del->m_Function == m_Function && del->m_Object == m_Object;
         }
 
     private:
-        ObjectType* object;
-        MemberFunctionType function;
+        ObjectType* m_Object;
+        MemberFunctionType m_Function;
     };
 
     template <typename LambdaType, typename RetValue, typename ...Args>
@@ -109,28 +109,22 @@ namespace impl
         using SelfClass = TLambdaDelegate<LambdaType, RetValue, Args...>;
 
         TLambdaDelegate(LambdaType&& function) :
-            lambda(std::make_shared<LambdaType>(std::forward<LambdaType>(function)))
+            m_Lambda(std::make_shared<LambdaType>(std::forward<LambdaType>(function)))
         {
         }
 
         TLambdaDelegate(const SelfClass* del) :
-            lambda(del->lambda)
+            m_Lambda(del->m_Lambda)
         {
         }
 
         RetValue Execute(Args&& ...args) const override
         {
-            return (*lambda)(std::forward<Args>(args)...);
-        }
-
-        bool Equals(const IDelegateBase& other) override
-        {
-            const SelfClass* del = dynamic_cast<const SelfClass*>(&other);
-            return del && del->lambda.get() == lambda.get();
+            return (*m_Lambda)(std::forward<Args>(args)...);
         }
 
     private:
-        std::shared_ptr<LambdaType> lambda;
+        std::shared_ptr<LambdaType> m_Lambda;
     };
 
     template <typename ObjectType, typename RetValue, typename ...Args>
@@ -143,25 +137,25 @@ namespace impl
         using Super = TDelegateBase<RetValue, Args...>;
 
         TSPMemberDelegate(MemberFunctionType function, std::shared_ptr<ObjectType> object) :
-            object(object),
-            function(function)
+            m_Object(object),
+            m_Function(function)
         {
         }
 
         TSPMemberDelegate(const SelfClass* del) :
-            object(del->object),
-            function(del->function)
+            m_Object(del->m_Object),
+            m_Function(del->m_Function)
         {
         }
 
         RetValue Execute(Args&& ...args) const override
         {
-            auto p = object.lock();
+            auto p = m_Object.lock();
 
             if (p)
             {
                 ObjectType* ptr = p.get();
-                return (ptr->*function)(std::forward<Args>(args)...);
+                return (ptr->*m_Function)(std::forward<Args>(args)...);
             }
 
             assert(p);
@@ -171,22 +165,22 @@ namespace impl
         bool Equals(const IDelegateBase& other) override
         {
             const SelfClass* del = dynamic_cast<const SelfClass*>(&other);
-            auto p = object.lock();
+            auto p = m_Object.lock();
 
             if (del && p)
             {
                 ObjectType* ptr = p.get();
-                ObjectType* ptrOther = del->object.lock().get();
+                ObjectType* ptrOther = del->m_Object.lock().get();
 
-                return del->function == function && (ptr == ptrOther);
+                return del->m_Function == m_Function && (ptr == ptrOther);
             }
 
             return false;
         }
 
     private:
-        std::weak_ptr<ObjectType> object;
-        MemberFunctionType function;
+        std::weak_ptr<ObjectType> m_Object;
+        MemberFunctionType m_Function;
     };
 
     inline void LambdaSizeCheck()
@@ -206,8 +200,8 @@ namespace impl
     {
     public:
         DelegateStorage() :
-            destroyFunc(nullptr),
-            cloneFunc{nullptr}
+            m_DestroyFunc(nullptr),
+            m_CloneFunc{nullptr}
         {
             Reset();
         }
@@ -228,15 +222,15 @@ namespace impl
         T* NewDelegateRaw()
         {
             Reset();
-            allocationSize = sizeof(T);
+            m_AllocationSize = sizeof(T);
 
-            destroyFunc = [](IDelegateBase* memory)
+            m_DestroyFunc = [](IDelegateBase* memory)
             {
                 T* p = static_cast<T*>(memory);
                 p->~T();
             };
 
-            cloneFunc = [](IDelegateBase* destination, const IDelegateBase* src)
+            m_CloneFunc = [](IDelegateBase* destination, const IDelegateBase* src)
             {
                 const T* p = static_cast<const T*>(src);
                 new (destination) T(p);
@@ -248,47 +242,47 @@ namespace impl
         void Reset()
         {
             ResetNoClear();
-            memset(&pad[0], 0, sizeof(pad));
-            allocationSize = 0;
-            destroyFunc = nullptr;
-            cloneFunc = nullptr;
+            memset(&m_Pad[0], 0, sizeof(m_Pad));
+            m_AllocationSize = 0;
+            m_DestroyFunc = nullptr;
+            m_CloneFunc = nullptr;
         }
 
         int32_t GetAllocationSize() const
         {
-            return allocationSize;
+            return m_AllocationSize;
         }
 
         void Clone(DelegateStorage& storage) const
         {
-            assert(cloneFunc);
+            assert(m_CloneFunc);
             storage.Reset();
 
-            cloneFunc((IDelegateBase*)&storage.pad[0], (const IDelegateBase*)&pad[0]);
-            storage.cloneFunc = cloneFunc;
-            storage.allocationSize = allocationSize;
-            storage.destroyFunc = destroyFunc;
+            m_CloneFunc((IDelegateBase*)&storage.m_Pad[0], (const IDelegateBase*)&m_Pad[0]);
+            storage.m_CloneFunc = m_CloneFunc;
+            storage.m_AllocationSize = m_AllocationSize;
+            storage.m_DestroyFunc = m_DestroyFunc;
         }
 
         template <typename T>
         T* GetDelegatePtr() const
         {
-            return const_cast<T*>(reinterpret_cast<const T*>(&pad[0]));
+            return const_cast<T*>(reinterpret_cast<const T*>(&m_Pad[0]));
         }
 
     private:
-        uint8_t pad[MaxNumBytesAllocated];
+        uint8_t m_Pad[MaxNumBytesAllocated];
 
-        int32_t allocationSize{0};
-        void (*destroyFunc)(IDelegateBase* memory);
-        void (*cloneFunc)(IDelegateBase* destination, const IDelegateBase* src);
+        int32_t m_AllocationSize{0};
+        void (*m_DestroyFunc)(IDelegateBase* memory);
+        void (*m_CloneFunc)(IDelegateBase* destination, const IDelegateBase* src);
 
     private:
         void ResetNoClear()
         {
-            if (destroyFunc)
+            if (m_DestroyFunc)
             {
-                destroyFunc((IDelegateBase*)&pad[0]);
+                m_DestroyFunc((IDelegateBase*)&m_Pad[0]);
             }
         }
     };

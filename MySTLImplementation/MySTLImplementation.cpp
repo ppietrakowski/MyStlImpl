@@ -133,6 +133,10 @@ int main()
     p = animal.ToShared();
 
     TSharedPtr<Dog> dog = DynamicCast<Dog>(p);
+
+    TMap<int, int> map;
+    map.Insert(10, 10);
+    map.Insert(60, 10);
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu

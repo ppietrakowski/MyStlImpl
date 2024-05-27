@@ -20,14 +20,14 @@ public:
 
     String(const String& str)
     {
-        data.Empty();
-        data.Append(str.data);
+        m_Data.Empty();
+        m_Data.Append(str.m_Data);
     }
 
     String& operator=(const String& str)
     {
-        data.Empty();
-        data.Append(str.data);
+        m_Data.Empty();
+        m_Data.Append(str.m_Data);
 
         return *this;
     }
@@ -56,14 +56,14 @@ public:
 
     int32_t GetLength() const
     {
-        return data.GetNumElements();
+        return m_Data.GetNumElements();
     }
 
     uint64_t GetHashCode() const;
 
     const char* GetData() const
     {
-        return data.GetData();
+        return m_Data.GetData();
     }
 
     void Clear();
@@ -107,7 +107,7 @@ public:
     }
 
 private:
-    CharContainer data;
+    CharContainer m_Data;
 
 private:
     void CopyFrom(const char* str, int32_t length);
@@ -120,14 +120,14 @@ private:
             return IndexNone;
         }
 
-        const int32_t len = data.GetNumElements();
+        const int32_t len = m_Data.GetNumElements();
 
         if (srcLen == 0 || len == 0)
         {
             return IndexNone; // won't find anything!
         }
 
-        const char* src = data.GetData();
+        const char* src = m_Data.GetData();
 
         for (int32_t i = startOffset; i <= (len - srcLen); i++)
         {
@@ -161,7 +161,7 @@ private:
     int32_t RFindImpl(const T* str, int32_t srcLen, int32_t endOffset) const
     {
         // establish a limit
-        int32_t limit = data.GetNumElements() - srcLen;
+        int32_t limit = m_Data.GetNumElements() - srcLen;
 
         if (limit < 0)
         {
@@ -178,14 +178,14 @@ private:
             endOffset = limit;
         }
 
-        int32_t len = data.GetNumElements();
+        int32_t len = m_Data.GetNumElements();
 
         if (srcLen == 0 || len == 0)
         {
             return -1; // won't find anything!
         }
 
-        const char* src = data.GetData();
+        const char* src = m_Data.GetData();
 
         for (int32_t i = endOffset; i >= 0; i--)
         {

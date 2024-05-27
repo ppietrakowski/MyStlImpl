@@ -3,6 +3,7 @@
 #include <utility>
 #include <cstring>
 #include <cassert>
+#include "InlineStorage.h"
 
 struct OptionalTag
 {
@@ -22,18 +23,18 @@ public:
     }
 
     TOptional(OptionalTag) :
-        valid(false)
+        m_bValid(false)
     {
     }
 
     TOptional& operator=(OptionalTag)
     {
-        valid = false;
+        m_bValid = false;
         return *this;
     }
 
     TOptional(const OptionalType& optionalValue) :
-        valid{false}
+        m_bValid{false}
     {
         Emplace(optionalValue);
     }
@@ -45,8 +46,8 @@ public:
     }
 
     TOptional(OptionalType&& optionalValue) :
-        valid{false},
-        storage{}
+        m_bValid{false},
+        m_Storage{}
     {
         Emplace(std::move(optionalValue));
     }
@@ -104,21 +105,20 @@ public:
     {
         Reset();
 
-        std::memset(storage, 0, sizeof(storage));
-        new (&storage[0]) OptionalType(std::forward<Args>(args)...);
-        valid = true;
+        m_Storage.Replace(std::forward<Args>(args)...);
+        m_bValid = true;
     }
 
     const OptionalType& GetValue() const
     {
-        assert(valid && "TOptional is not set");
-        return *(const OptionalType*)&storage[0];
+        assert(m_bValid && "TOptional is not set");
+        return *m_Storage.GetValue();
     }
 
     OptionalType& GetValue()
     {
-        assert(valid && "TOptional is not set");
-        return *(OptionalType*)&storage[0];
+        assert(m_bValid && "TOptional is not set");
+        return *m_Storage.GetValue();
     }
 
     const OptionalType& operator*() const
@@ -143,35 +143,34 @@ public:
 
     bool IsSet() const
     {
-        return valid;
+        return m_bValid;
     }
 
     operator bool() const
     {
-        return valid;
+        return m_bValid;
     }
 
     bool operator!() const
     {
-        return !valid;
+        return !m_bValid;
     }
 
     void Reset()
     {
-        if (valid)
+        if (m_bValid)
         {
             DestroyHoldElement();
         }
     }
 
 private:
-    uint8_t storage[sizeof(OptionalType)];
-    bool valid;
+    TInlineStorage<OptionalType> m_Storage;
+    bool m_bValid;
 
     void DestroyHoldElement()
     {
-        OptionalType* type = (OptionalType*)storage;
-        type->~OptionalType();
-        valid = false;
+        m_Storage.Destroy();
+        m_bValid = false;
     }
 };

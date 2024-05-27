@@ -16,7 +16,7 @@ struct TCompressedPair : private EmptyType
 {
     using Super = EmptyType;
 
-    Pointer p{};
+    Pointer Ptr{};
 
     TCompressedPair() = default;
     TCompressedPair(TCompressedPair&& p) noexcept :
@@ -26,10 +26,10 @@ struct TCompressedPair : private EmptyType
 
     void InvokeDeleter()
     {
-        if (p)
+        if (Ptr)
         {
-            Super::operator()(p);
-            p = nullptr;
+            Super::operator()(Ptr);
+            Ptr = nullptr;
         }
     }
 };
@@ -51,68 +51,68 @@ public:
     template <typename OtherPointerType, typename OtherDeleterType>
     TUniquePtr(TUniquePtr<OtherPointerType, OtherDeleterType>&& ptr) noexcept
     {
-        PointerType* p = static_cast<PointerType*>(std::exchange(ptr.compressedPair.p, nullptr));
+        PointerType* p = static_cast<PointerType*>(std::exchange(ptr.m_CompressedPair.Ptr, nullptr));
 
-        compressedPair = std::exchange(ptr.compressedPair, TCompressedPair<PointerType*, DeleterType>{});
-        ptr.compressedPair.p = nullptr;
-        compressedPair.p = p;
+        m_CompressedPair = std::exchange(ptr.m_CompressedPair, TCompressedPair<PointerType*, DeleterType>{});
+        ptr.m_CompressedPair.Ptr = nullptr;
+        m_CompressedPair.Ptr = p;
     }
 
     template <typename OtherPointerType, typename OtherDeleterType>
     TUniquePtr& operator=(TUniquePtr<OtherPointerType, OtherDeleterType>&& ptr) noexcept
     {
-        PointerType* p = static_cast<PointerType*>(std::exchange(ptr.compressedPair.p, nullptr));
+        PointerType* p = static_cast<PointerType*>(std::exchange(ptr.m_CompressedPair.Ptr, nullptr));
 
-        compressedPair = std::exchange(ptr.compressedPair, TCompressedPair<PointerType*, DeleterType>{});
-        ptr.compressedPair.p = nullptr;
-        compressedPair.p = p;
+        m_CompressedPair = std::exchange(ptr.m_CompressedPair, TCompressedPair<PointerType*, DeleterType>{});
+        ptr.m_CompressedPair.Ptr = nullptr;
+        m_CompressedPair.Ptr = p;
 
         return *this;
     }
 
     ~TUniquePtr() noexcept
     {
-        compressedPair.InvokeDeleter();
+        m_CompressedPair.InvokeDeleter();
     }
 
     PointerType* Get() const
     {
-        return compressedPair.p;
+        return m_CompressedPair.Ptr;
     }
 
     operator bool() const
     {
-        return !!compressedPair.p;
+        return !!m_CompressedPair.Ptr;
     }
 
     bool operator!() const
     {
-        return !compressedPair.p;
+        return !m_CompressedPair.Ptr;
     }
 
     PointerType* Release()
     {
-        PointerType* p = compressedPair.p;
-        compressedPair.p = nullptr;
+        PointerType* p = m_CompressedPair.Ptr;
+        m_CompressedPair.Ptr = nullptr;
         return p;
     }
 
     void Reset(PointerType* p)
     {
-        compressedPair.InvokeDeleter();
-        compressedPair.p = p;
+        m_CompressedPair.InvokeDeleter();
+        m_CompressedPair.Ptr = p;
     }
 
     PointerType* operator->() const
     {
-        return compressedPair.p;
+        return m_CompressedPair.Ptr;
     }
 
     PointerType& operator*() const
     {
-        return compressedPair.p;
+        return m_CompressedPair.Ptr;
     }
 
 private:
-    TCompressedPair<PointerType*, DeleterType> compressedPair;
+    TCompressedPair<PointerType*, DeleterType> m_CompressedPair;
 };

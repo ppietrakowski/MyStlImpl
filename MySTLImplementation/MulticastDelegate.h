@@ -17,7 +17,7 @@ public:
 
     void AddStatic(void(*function)(Args... args))
     {
-        delegates.EmplaceBack(function);
+        m_Delegates.EmplaceBack(function);
     }
 
     void RemoveStatic(void(*function)(Args... args))
@@ -29,7 +29,7 @@ public:
     template <typename ObjectType>
     void AddObjectRaw(void(ObjectType::* function)(Args... args), ObjectType& object)
     {
-        delegates.EmplaceBack(function, object);
+        m_Delegates.EmplaceBack(function, object);
     }
 
     template <typename ObjectType>
@@ -42,7 +42,7 @@ public:
     template <typename ObjectType>
     void AddObjectSP(void(ObjectType::* function)(Args... args), std::shared_ptr<ObjectType> object)
     {
-        delegates.EmplaceBack(function, object);
+        m_Delegates.EmplaceBack(function, object);
     }
 
     template <typename ObjectType>
@@ -55,7 +55,7 @@ public:
     template <typename LambdaType>
     void AddLambda(LambdaType&& lambda)
     {
-        delegates.Add(DelegateType().BindLambda(std::forward<LambdaType>(lambda)));
+        m_Delegates.Add(DelegateType().BindLambda(std::forward<LambdaType>(lambda)));
     }
 
     template <typename LambdaType>
@@ -67,7 +67,7 @@ public:
 
     void Broadcast(Args&& ...args)
     {
-        for (auto& del : delegates)
+        for (auto& del : m_Delegates)
         {
             del.Execute(std::forward<Args>(args)...);
         }
@@ -75,19 +75,19 @@ public:
 
     int32_t GetNumDelegates() const
     {
-        return delegates.GetNumElements();
+        return m_Delegates.GetNumElements();
     }
 
 private:
-    TArray<DelegateType> delegates;
+    TArray<DelegateType> m_Delegates;
 
 private:
     void DeleteDelegate(const DelegateType& del)
     {
-        auto i = std::find(delegates.begin(), delegates.end(), del);
-        if (i != delegates.end())
+        auto i = std::find(m_Delegates.begin(), m_Delegates.end(), del);
+        if (i != m_Delegates.end())
         {
-            delegates.erase(i);
+            m_Delegates.erase(i);
         }
     }
 };
