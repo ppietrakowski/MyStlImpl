@@ -286,6 +286,12 @@ class TSharedPtr
     template <typename OtherPointerType, EThreadMode OtherThreadMode>
     friend class TSharedPtr;
 
+    template <typename To, EThreadMode ThreadMode, typename From>
+    friend TSharedPtr<To, ThreadMode> DynamicCast(const TSharedPtr<From, ThreadMode>& from);
+
+    template <typename To, EThreadMode ThreadMode, typename From>
+    friend TSharedPtr<To, ThreadMode> ReinterpretCast(const TSharedPtr<From, ThreadMode>& from);
+
 public:
     using RefCounter = std::conditional_t<ThreadMode == EThreadMode::SingleThread, impl::TSingleThreadSafeRefCounter<PointerType>, impl::TMultiThreadSafeRefCounter<PointerType>>;
 
@@ -428,6 +434,12 @@ private:
 template <typename PointerType, EThreadMode ThreadMode = EThreadMode::Auto>
 class TWeakPointer
 {
+    template <typename To, EThreadMode ThreadMode, typename From>
+    friend TWeakPointer<To, ThreadMode> DynamicCast(const TWeakPointer<From, ThreadMode>& from);
+
+    template <typename To, EThreadMode ThreadMode, typename From>
+    friend TWeakPointer<To, ThreadMode> ReinterpretCast(const TWeakPointer<From, ThreadMode>& from);
+
 public:
     using SharedPtr = TSharedPtr<PointerType, ThreadMode>;
     using RefCounter = SharedPtr::RefCounter;
@@ -533,7 +545,7 @@ public:
 
 private:
     RefCounter* refCounter{nullptr};
-    
+
 private:
     void Clear()
     {
@@ -573,4 +585,51 @@ TSharedPtr<PointerType> MakeShared(Args&& ...args)
     {
         return MakeSharedMp<PointerType>(std::forward<Args>(args)...);
     }
+}
+
+template <typename To, EThreadMode ThreadMode, typename From>
+TSharedPtr<To, ThreadMode> DynamicCast(const TSharedPtr<From, ThreadMode>& from)
+{
+    using RefCounter = TSharedPtr<To, ThreadMode>::RefCounter;
+
+    To* p = dynamic_cast<To*>(from.Get());
+    if (p)
+    {
+        from.refCounter->AddRef();
+        return TSharedPtr<To, ThreadMode>((RefCounter*)from.refCounter);
+    }
+
+    return NULL;
+}
+
+template <typename To, EThreadMode ThreadMode, typename From>
+TSharedPtr<To, ThreadMode> ReinterpretCast(const TSharedPtr<From, ThreadMode>& from)
+{
+    using RefCounter = TSharedPtr<To, ThreadMode>::RefCounter;
+    from.refCounter->AddRef();
+
+    return TSharedPtr<To, ThreadMode>((RefCounter*)from.refCounter);
+}
+
+template <typename To, EThreadMode ThreadMode, typename From>
+TWeakPointer<To, ThreadMode> DynamicCast(const TWeakPointer<From, ThreadMode>& from)
+{
+    using RefCounter = TWeakPointer<To, ThreadMode>::RefCounter;
+
+    To* p = dynamic_cast<To*>(from.Get());
+    if (p)
+    {
+        from.refCounter->AddWeakRef();
+        return TWeakPointer<To, ThreadMode>((RefCounter*)from.refCounter);
+    }
+
+    return NULL;
+}
+
+template <typename To, EThreadMode ThreadMode, typename From>
+TWeakPointer<To, ThreadMode> ReinterpretCast(const TWeakPointer<From, ThreadMode>& from)
+{
+    using RefCounter = TWeakPointer<To, ThreadMode>::RefCounter;
+    from.refCounter->AddWeakRef();
+    return TWeakPointer<To, ThreadMode>((RefCounter*)from.refCounter);
 }

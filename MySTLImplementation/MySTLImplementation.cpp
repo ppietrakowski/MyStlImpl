@@ -131,6 +131,8 @@ int main()
 
     animal = animal2;
     p = animal.ToShared();
+
+    TSharedPtr<Dog> dog = DynamicCast<Dog>(p);
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
