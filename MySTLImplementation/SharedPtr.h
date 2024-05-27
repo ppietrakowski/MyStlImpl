@@ -329,11 +329,7 @@ public:
     template <typename OtherPointerType>
     SelfSharedPtr& operator=(const TSharedPtr<OtherPointerType, ThreadMode>& p)
     {
-        if (refCounter)
-        {
-            refCounter->Release();
-        }
-
+        Clear();
         refCounter = (RefCounter*)p.refCounter;
         pointer = static_cast<PointerType*>(p.pointer);
 
@@ -345,13 +341,36 @@ public:
         return *this;
     }
 
-    ~TSharedPtr() noexcept
+    TSharedPtr(const SelfSharedPtr& p) :
+        refCounter{p.refCounter},
+        pointer{p.pointer}
     {
         if (refCounter)
         {
-            refCounter->Release();
+            refCounter->AddRef();
         }
     }
+
+    SelfSharedPtr& operator=(const SelfSharedPtr& p)
+    {
+        Clear();
+        refCounter = p.refCounter;
+        pointer = p.pointer;
+
+        if (refCounter)
+        {
+            refCounter->AddRef();
+        }
+
+        return *this;
+    }
+
+    ~TSharedPtr() noexcept
+    {
+        Clear();
+    }
+
+public:
 
     PointerType* Get() const
     {
@@ -369,7 +388,7 @@ public:
         }
     }
 
-    void Swap(TSharedPtr<PointerType, ThreadMode>& p)
+    void swap(TSharedPtr<PointerType, ThreadMode>& p)
     {
         std::swap(pointer, p.pointer);
         std::swap(refCounter, p.refCounter);
@@ -393,6 +412,17 @@ public:
 private:
     RefCounter* refCounter{nullptr};
     PointerType* pointer{nullptr};
+
+private:
+    void Clear()
+    {
+        if (refCounter)
+        {
+            refCounter->Release();
+        }
+
+        refCounter = nullptr;
+    }
 };
 
 template <typename PointerType, EThreadMode ThreadMode = EThreadMode::Auto>
@@ -406,7 +436,7 @@ public:
 
     template <typename OtherPointerType>
     TWeakPointer(const TSharedPtr<OtherPointerType, ThreadMode>& p) :
-        refCounter(p.refCounter)
+        refCounter((RefCounter*)p.refCounter)
     {
         if (refCounter)
         {
@@ -414,10 +444,48 @@ public:
         }
     }
 
-    template <typename OtherPointerType>
-    TWeakPointer(const TWeakPointer<OtherPointerType>& p)
+    TWeakPointer(const TWeakPointer<PointerType, ThreadMode>& p) :
+        refCounter((RefCounter*)p.refCounter)
     {
-        static_assert(std::is_assignable_v<PointerType, OtherPointerType>);
+        if (refCounter)
+        {
+            refCounter->AddWeakRef();
+        }
+    }
+
+    TWeakPointer& operator=(const TWeakPointer<PointerType, ThreadMode>& p)
+    {
+        Clear();
+        refCounter = p.refCounter;
+
+        if (refCounter)
+        {
+            refCounter->AddWeakRef();
+        }
+
+        return *this;
+    }
+
+    template <typename OtherPointerType>
+    TWeakPointer& operator=(const TSharedPtr<OtherPointerType, ThreadMode>& p)
+    {
+        static_assert(std::is_assignable_v<PointerType*, OtherPointerType*>);
+        Clear();
+
+        refCounter = (RefCounter*)p.refCounter;
+
+        if (refCounter)
+        {
+            refCounter->AddWeakRef();
+        }
+
+        return *this;
+    }
+
+    template <typename OtherPointerType>
+    TWeakPointer(const TWeakPointer<OtherPointerType, ThreadMode>& p)
+    {
+        static_assert(std::is_assignable_v<PointerType*, OtherPointerType*>);
         refCounter = (RefCounter*)p.refCounter;
 
         if (refCounter)
@@ -428,11 +496,10 @@ public:
 
     ~TWeakPointer() noexcept
     {
-        if (refCounter)
-        {
-            refCounter->ReleaseWeakRef();
-        }
+        Clear();
     }
+
+public:
 
     bool IsValid() const
     {
@@ -466,6 +533,15 @@ public:
 
 private:
     RefCounter* refCounter{nullptr};
+    
+private:
+    void Clear()
+    {
+        if (refCounter)
+        {
+            refCounter->ReleaseWeakRef();
+        }
+    }
 };
 
 template <typename PointerType, typename ...Args>

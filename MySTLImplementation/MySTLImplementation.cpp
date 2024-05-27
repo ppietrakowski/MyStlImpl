@@ -108,7 +108,7 @@ int main()
             (int)dev.SupportsHardwareAcceleration, (int)dev.DeviceType.GetByteValue());
     }
 
-    for (TOptional<int32_t> &i : d)
+    for (TOptional<int32_t>& i : d)
     {
         if (i.IsSet())
         {
@@ -120,8 +120,17 @@ int main()
         }
     }
 
-    TSharedPtr<IAnimal> p(new Dog());
-    p = MakeShared<Cat>();
+    TSharedPtr<IAnimal> p = MakeShared<Dog>();
+
+    TWeakPointer<IAnimal> animal = p;
+    TWeakPointer<IAnimal> animal2 = animal;
+
+    TSharedPtr<IAnimal> p2 = p;
+
+    p2 = p;
+
+    animal = animal2;
+    p = animal.ToShared();
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
