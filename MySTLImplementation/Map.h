@@ -489,8 +489,8 @@ private:
         }
         else
         {
-            newHashes.AddZeroed(m_Hashes.GetNumElements() * 2);
-            newBuckets.AddZeroed(m_Buckets.GetNumElements() * 2);
+            newHashes.AddZeroed(m_Hashes.GetNumElements());
+            newBuckets.AddZeroed(m_Buckets.GetNumElements());
         }
 
         for (auto& v : this->m_Buckets)
