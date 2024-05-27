@@ -97,7 +97,7 @@ public:
         return p;
     }
 
-    void Reset(PointerType* p)
+    void Reset(PointerType* p = nullptr)
     {
         m_CompressedPair.InvokeDeleter();
         m_CompressedPair.Ptr = p;
