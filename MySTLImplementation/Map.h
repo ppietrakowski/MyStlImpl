@@ -133,7 +133,6 @@ public:
         return it != nullptr;
     }
 
-
     void Clear()
     {
         values.Clear();

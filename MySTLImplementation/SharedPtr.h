@@ -3,157 +3,278 @@
 #include <cstdint>
 #include <atomic>
 
-template <typename PointerType>
-class SingleThreadSafeRefCounter
+#define FORCE_MULTITHREAD_MODE 0
+
+namespace impl
 {
-public:
-    SingleThreadSafeRefCounter(PointerType* p) :
-        numWeakRefs{0},
-        numRefs{1},
-        pointer{p}
+    template <typename PointerType>
+    class TSingleThreadSafeRefCounter
     {
-    }
-
-    void Release()
-    {
-        int32_t numRefs = --this->numRefs;
-
-        if (numRefs == 0)
+    public:
+        TSingleThreadSafeRefCounter() :
+            numWeakRefs{0},
+            numSharedRefs{1}
         {
-            if (numWeakRefs == 0)
-            {
-                delete this;
-            }
-            else
-            {
-                pointer = nullptr;
-            }
         }
-    }
 
-    void AddRef()
-    {
-        numRefs++;
-    }
-
-    void ReleaseWeakRef()
-    {
-        int32_t numRefs = --numWeakRefs;
-
-        if (numRefs == 0)
+        void Release()
         {
+            int32_t numRefs = --this->numSharedRefs;
+
             if (numRefs == 0)
             {
-                delete this;
+                DestroyObject();
+
+                if (numWeakRefs == 0)
+                {
+                    delete this;
+                }
             }
         }
-    }
 
-    void AddWeakRef()
-    {
-        numWeakRefs++;
-    }
-
-    PointerType* GetPointer() const
-    {
-        return pointer;
-    }
-
-    int32_t GetUseCount() const
-    {
-        return numRefs;
-    }
-
-protected:
-    ~SingleThreadSafeRefCounter() noexcept
-    {
-        delete pointer;
-    }
-
-private:
-    int32_t numRefs{0};
-    int32_t numWeakRefs{0};
-    PointerType* pointer;
-};
-
-template <typename PointerType>
-class MultiThreadSafeRefCounter
-{
-public:
-    MultiThreadSafeRefCounter(PointerType* p) :
-        numWeakRefs{0},
-        numRefs{1},
-        pointer{p}
-    {
-    }
-
-    void Release()
-    {
-        int32_t numRefs = --numRefs;
-
-        if (numRefs == 0)
+        void AddRef()
         {
-            if (numWeakRefs == 0)
-            {
-                delete this;
-            }
-            else
-            {
-                pointer = nullptr;
-            }
+            numSharedRefs++;
         }
-    }
 
-    void AddRef()
-    {
-        numRefs++;
-    }
-
-    void ReleaseWeakRef()
-    {
-        --numWeakRefs;
-
-        if (numWeakRefs == 0)
+        void ReleaseWeakRef()
         {
+            int32_t numRefs = --numWeakRefs;
+
             if (numRefs == 0)
             {
-                delete this;
+                if (this->numSharedRefs == 0)
+                {
+                    delete this;
+                }
             }
         }
-    }
 
-    void AddWeakRef()
+        void AddWeakRef()
+        {
+            numWeakRefs++;
+        }
+
+        virtual PointerType* GetPointer() const = 0;
+
+        int32_t GetUseCount() const
+        {
+            return numSharedRefs;
+        }
+
+    protected:
+        ~TSingleThreadSafeRefCounter() noexcept = default;
+
+        virtual void DestroyObject() = 0;
+
+    private:
+        int32_t numSharedRefs{0};
+        int32_t numWeakRefs{0};
+    };
+
+    template <typename PointerType>
+    class TMultiThreadSafeRefCounter
     {
-        numWeakRefs++;
-    }
+    public:
+        TMultiThreadSafeRefCounter() :
+            numWeakRefs{0},
+            numRefs{1}
+        {
+        }
 
-    PointerType* GetPointer() const
+        void Release()
+        {
+            int32_t numRefs = --numRefs;
+
+            if (numRefs == 0)
+            {
+                DestroyObject();
+
+                if (numWeakRefs == 0)
+                {
+                    delete this;
+                }
+            }
+        }
+
+        void AddRef()
+        {
+            numRefs++;
+        }
+
+        void ReleaseWeakRef()
+        {
+            --numWeakRefs;
+
+            if (numWeakRefs == 0)
+            {
+                if (numRefs == 0)
+                {
+                    delete this;
+                }
+            }
+        }
+
+        void AddWeakRef()
+        {
+            numWeakRefs++;
+        }
+
+        virtual PointerType* GetPointer() const = 0;
+
+        int32_t GetUseCount() const
+        {
+            return numRefs;
+        }
+
+    protected:
+        ~TMultiThreadSafeRefCounter() noexcept = default;
+
+        virtual void DestroyObject() = 0;
+
+    private:
+        std::atomic_int32_t numRefs{0};
+        std::atomic_int32_t numWeakRefs{0};
+    };
+
+    template <typename PointerType>
+    class TDefaultSpRefCounter : public impl::TSingleThreadSafeRefCounter<PointerType>
     {
-        return pointer;
-    }
+    public:
+        typedef impl::TSingleThreadSafeRefCounter<PointerType> Super;
 
-    int32_t GetUseCount() const
+        TDefaultSpRefCounter(PointerType* p) :
+            pointer(p)
+        {
+        }
+
+        virtual PointerType* GetPointer() const override
+        {
+            return pointer;
+        }
+
+    protected:
+        ~TDefaultSpRefCounter() noexcept = default;
+
+        virtual void DestroyObject() override
+        {
+            delete pointer;
+            pointer = nullptr;
+        }
+
+    private:
+        PointerType* pointer;
+    };
+
+    template <typename PointerType>
+    class TInlineSpRefCounter : public impl::TSingleThreadSafeRefCounter<PointerType>
     {
-        return numRefs;
-    }
+    public:
+        typedef impl::TSingleThreadSafeRefCounter<PointerType> Super;
 
-protected:
-    ~MultiThreadSafeRefCounter() noexcept
+        template <typename ...Args>
+        TInlineSpRefCounter(Args&& ...args)
+        {
+            new (&pad[0]) PointerType(std::forward<Args>(args)...);
+            isSet = true;
+        }
+
+        virtual PointerType* GetPointer() const override
+        {
+            return isSet ? (PointerType*)pad : NULL;
+        }
+
+    protected:
+        ~TInlineSpRefCounter() noexcept = default;
+
+        virtual void DestroyObject() override
+        {
+            if constexpr (!std::is_trivially_destructible_v<PointerType>)
+            {
+                PointerType* p = (PointerType*)pad;
+                p->~PointerType();
+            }
+
+            isSet = false;
+        }
+
+    private:
+        uint8_t pad[sizeof(PointerType)];
+        bool isSet{false};
+    };
+
+    template <typename PointerType>
+    class TDefaultMpRefCounter : public impl::TMultiThreadSafeRefCounter<PointerType>
     {
-        delete pointer;
-    }
+    public:
+        typedef impl::TMultiThreadSafeRefCounter<PointerType> Super;
 
-private:
-    std::atomic_int32_t numRefs{0};
-    std::atomic_int32_t numWeakRefs{0};
-    PointerType* pointer;
-};
+        TDefaultMpRefCounter(PointerType* p) :
+            pointer(p)
+        {
+        }
+
+        virtual PointerType* GetPointer() const override
+        {
+            return pointer;
+        }
+
+    protected:
+        ~TDefaultMpRefCounter() noexcept = default;
+
+        virtual void DestroyObject() override
+        {
+            delete pointer;
+            pointer = nullptr;
+        }
+
+    private:
+        PointerType* pointer;
+    };
+
+    template <typename PointerType>
+    class TInlineMpRefCounter : public impl::TMultiThreadSafeRefCounter<PointerType>
+    {
+    public:
+        typedef impl::TMultiThreadSafeRefCounter<PointerType> Super;
+
+        template <typename ...Args>
+        TInlineMpRefCounter(Args&& ...args)
+        {
+            new (&pad[0]) PointerType(std::forward<Args>(args)...);
+            isSet = true;
+        }
+
+        virtual PointerType* GetPointer() const override
+        {
+            return isSet ? (PointerType*)pad : NULL;
+        }
+
+    protected:
+        ~TInlineMpRefCounter() noexcept = default;
+
+        virtual void DestroyObject() override
+        {
+            if constexpr (!std::is_trivially_destructible_v<PointerType>)
+            {
+                PointerType* p = (PointerType*)pad;
+                p->~PointerType();
+            }
+
+            isSet = false;
+        }
+
+    private:
+        uint8_t pad[sizeof(PointerType)];
+        bool isSet{false};
+    };
+}
 
 enum class EThreadMode
 {
     SingleThread,
     MultiThread,
-    Auto = SingleThread
+    Auto = FORCE_MULTITHREAD_MODE ? MultiThread : SingleThread
 };
 
 template <typename PointerType, EThreadMode ThreadMode = EThreadMode::Auto>
@@ -162,8 +283,15 @@ class TSharedPtr
     template <typename OtherPointerType, EThreadMode OtherThreadMode>
     friend class TWeakPointer;
 
+    template <typename OtherPointerType, EThreadMode OtherThreadMode>
+    friend class TSharedPtr;
+
 public:
-    using RefCounter = std::conditional_t<ThreadMode == EThreadMode::SingleThread, SingleThreadSafeRefCounter<PointerType>, MultiThreadSafeRefCounter<PointerType>>;
+    using RefCounter = std::conditional_t<ThreadMode == EThreadMode::SingleThread, impl::TSingleThreadSafeRefCounter<PointerType>, impl::TMultiThreadSafeRefCounter<PointerType>>;
+
+    using DefaultRefCounter = std::conditional_t<ThreadMode == EThreadMode::SingleThread, impl::TDefaultSpRefCounter<PointerType>, impl::TDefaultMpRefCounter<PointerType>>;
+
+    using SelfSharedPtr = TSharedPtr<PointerType, ThreadMode>;
 
     TSharedPtr() :
         refCounter{nullptr},
@@ -171,26 +299,26 @@ public:
     {
     }
 
-    TSharedPtr(RefCounter *counter) :
+    TSharedPtr(RefCounter* counter) :
         refCounter{counter},
         pointer{nullptr}
     {
         if (refCounter)
         {
-            pointer = refCounter->GetPointer();
-            refCounter->AddRef();
+            pointer = static_cast<PointerType*>(refCounter->GetPointer());
         }
     }
 
-    TSharedPtr(PointerType* p) :
-        refCounter{new RefCounter(p)},
-        pointer{p}
+    explicit TSharedPtr(PointerType* p) :
+        refCounter{new DefaultRefCounter(static_cast<PointerType*>(p))},
+        pointer{static_cast<PointerType*>(p)}
     {
     }
 
-    TSharedPtr(const TSharedPtr<PointerType, ThreadMode>& p) :
-        refCounter{p.refCounter},
-        pointer{p.pointer}
+    template <typename OtherPointerType>
+    TSharedPtr(const TSharedPtr<OtherPointerType, ThreadMode>& p) :
+        refCounter{(RefCounter*)p.refCounter},
+        pointer{static_cast<PointerType*>(p.pointer)}
     {
         if (refCounter)
         {
@@ -198,15 +326,23 @@ public:
         }
     }
 
-    TSharedPtr& operator=(const TSharedPtr<PointerType, ThreadMode>& p)
+    template <typename OtherPointerType>
+    SelfSharedPtr& operator=(const TSharedPtr<OtherPointerType, ThreadMode>& p)
     {
-        refCounter = p.refCounter;
-        pointer = p.pointer;
+        if (refCounter)
+        {
+            refCounter->Release();
+        }
+
+        refCounter = (RefCounter*)p.refCounter;
+        pointer = static_cast<PointerType*>(p.pointer);
 
         if (refCounter)
         {
             refCounter->AddRef();
         }
+
+        return *this;
     }
 
     ~TSharedPtr() noexcept
@@ -229,7 +365,7 @@ public:
         if (p)
         {
             pointer = p;
-            refCounter = new RefCounter(p);
+            refCounter = new DefaultRefCounter(p);
         }
     }
 
@@ -320,9 +456,45 @@ public:
 
     TSharedPtr<PointerType, ThreadMode> ToShared() const
     {
+        if (refCounter)
+        {
+            refCounter->AddRef();
+        }
+
         return TSharedPtr<PointerType, ThreadMode>{refCounter};
     }
 
 private:
     RefCounter* refCounter{nullptr};
 };
+
+template <typename PointerType, typename ...Args>
+TSharedPtr<PointerType, EThreadMode::SingleThread> MakeSharedSp(Args&& ...args)
+{
+    static_assert(!std::is_abstract_v<PointerType>);
+
+    impl::TInlineSpRefCounter<PointerType>* refCounter = new impl::TInlineSpRefCounter<PointerType>(std::forward<Args>(args)...);
+    return TSharedPtr<PointerType, EThreadMode::SingleThread>{refCounter};
+}
+
+template <typename PointerType, typename ...Args>
+TSharedPtr<PointerType, EThreadMode::MultiThread> MakeSharedMp(Args&& ...args)
+{
+    static_assert(!std::is_abstract_v<PointerType>);
+
+    impl::TInlineMpRefCounter<PointerType>* refCounter = new impl::TInlineMpRefCounter<PointerType>(std::forward<Args>(args)...);
+    return TSharedPtr<PointerType, EThreadMode::MultiThread>{refCounter};
+}
+
+template <typename PointerType, typename ...Args>
+TSharedPtr<PointerType> MakeShared(Args&& ...args)
+{
+    if constexpr (EThreadMode::Auto == EThreadMode::SingleThread)
+    {
+        return MakeSharedSp<PointerType>(std::forward<Args>(args)...);
+    }
+    else
+    {
+        return MakeSharedMp<PointerType>(std::forward<Args>(args)...);
+    }
+}

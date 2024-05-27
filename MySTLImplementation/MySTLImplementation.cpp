@@ -16,6 +16,56 @@ enum EAttributeIndex
     NumAttributes
 };
 
+enum class EDeviceType
+{
+    Null,
+    OpenGL,
+    DirectX9,
+    DirectX11,
+    DirectX12,
+};
+
+struct FVideoMode
+{
+    int Width;
+    int Height;
+    TEnumAsByte<EDeviceType> DeviceType;
+    bool SupportsHardwareAcceleration : 1;
+};
+
+class IAnimal
+{
+public:
+    virtual ~IAnimal() = default;
+    virtual void DoSpeak() = 0;
+};
+
+class Dog : public IAnimal
+{
+public:
+
+    // Inherited via IAnimal
+    void DoSpeak() override
+    {
+        puts("Woof");
+    }
+
+    int32_t data[100];
+};
+
+class Cat : public IAnimal
+{
+public:
+
+    // Inherited via IAnimal
+    void DoSpeak() override
+    {
+        puts("Miauu");
+    }
+
+    float data[100];
+};
+
 int main()
 {
     TStaticArray<int32_t, NumAttributes> attributes = {0};
@@ -32,6 +82,46 @@ int main()
 
         assert(index.IsSet() && index.GetValue() == 4);
     }
+
+    TList<TOptional<int32_t>> d;
+
+    d.EmplaceBack(40);
+    d.EmplaceBack(80);
+    d.EmplaceBack(NullOpt);
+    d.EmplaceBack(20);
+    d.EmplaceBack(70);
+
+    d.EmplaceBack();
+
+    TArray<FVideoMode> devices;
+
+    devices.EmplaceBack(FVideoMode{1280, 720, EDeviceType::DirectX11, true});
+    devices.EmplaceBack();
+    devices.EmplaceBack();
+    devices.EmplaceBack();
+    devices.EmplaceBack();
+
+
+    for (auto& dev : devices)
+    {
+        printf("%ix%i SupportsHardware=%i DeviceIndex=%i\n", dev.Width, dev.Height,
+            (int)dev.SupportsHardwareAcceleration, (int)dev.DeviceType.GetByteValue());
+    }
+
+    for (TOptional<int32_t> &i : d)
+    {
+        if (i.IsSet())
+        {
+            printf("%i\n", i.GetValue());
+        }
+        else
+        {
+            printf("NullOpt\n");
+        }
+    }
+
+    TSharedPtr<IAnimal> p(new Dog());
+    p = MakeShared<Cat>();
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu

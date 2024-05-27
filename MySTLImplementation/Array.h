@@ -347,10 +347,10 @@ public:
             allocator.ConstructElement(&data[i], std::move(data[i]));
         }
 
-        allocator.DestroyRange(data, data + numElements);
-        allocator.Free(data);
+        allocator.DestroyRange(this->data, this->data + numElements);
+        allocator.Free(this->data);
 
-        data = data;
+        this->data = data;
         numAlloc = newCapacity;
     }
 
