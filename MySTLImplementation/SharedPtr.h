@@ -378,7 +378,7 @@ public:
 
     void Reset(PointerType* p = nullptr)
     {
-        TSharedPtr<PointerType, ThreadMode>{}.Swap(*this);
+        TSharedPtr<PointerType, ThreadMode>{}.swap(*this);
 
         if (p)
         {
