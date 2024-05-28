@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <atomic>
+#include <cassert>
 #include "InlineStorage.h"
 
 #define FORCE_MULTITHREAD_MODE 0
@@ -400,12 +401,27 @@ public:
 
     PointerType& operator*() const
     {
-        return m_Pointer;
+        return *m_Pointer;
     }
 
     int32_t GetUseCount() const
     {
         return m_RefCounter->GetUseCount();
+    }
+
+    bool IsValid() const
+    {
+        return m_RefCounter;
+    }
+
+    operator bool() const
+    {
+        return IsValid();
+    }
+
+    bool operator!() const
+    {
+        return !IsValid();
     }
 
 private:
@@ -443,6 +459,16 @@ public:
     TWeakPointer(const TSharedPtr<OtherPointerType, ThreadMode>& p) :
         m_RefCounter((RefCounter*)p.m_RefCounter)
     {
+        static_assert(std::is_assignable_v<PointerType*, OtherPointerType*>);
+        if (m_RefCounter)
+        {
+            m_RefCounter->AddWeakRef();
+        }
+    }
+
+    TWeakPointer(const TSharedPtr<PointerType, ThreadMode>& p) :
+        m_RefCounter((RefCounter*)p.m_RefCounter)
+    {
         if (m_RefCounter)
         {
             m_RefCounter->AddWeakRef();
@@ -475,6 +501,20 @@ public:
     TWeakPointer& operator=(const TSharedPtr<OtherPointerType, ThreadMode>& p)
     {
         static_assert(std::is_assignable_v<PointerType*, OtherPointerType*>);
+        Clear();
+
+        m_RefCounter = (RefCounter*)p.m_RefCounter;
+
+        if (m_RefCounter)
+        {
+            m_RefCounter->AddWeakRef();
+        }
+
+        return *this;
+    }
+
+    TWeakPointer& operator=(const TSharedPtr<PointerType, ThreadMode>& p)
+    {
         Clear();
 
         m_RefCounter = (RefCounter*)p.m_RefCounter;

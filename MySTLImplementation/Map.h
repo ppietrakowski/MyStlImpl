@@ -204,12 +204,8 @@ struct DefaultHashFunctions
         uint64_t n = std::hash<std::string>()(element);
         return static_cast<uint64_t>(n);
     }
-
-    uint64_t operator()(const String& str) const
-    {
-        return str.GetHashCode();
-    }
 };
+
 
 template <typename MapType, typename KeyType, typename AllocatorType>
 class TMapIterator
@@ -279,6 +275,62 @@ private:
     int32_t m_Index{0};
 };
 
+template <typename MapType, typename KeyType, typename AllocatorType>
+class TConstMapIterator
+{
+public:
+    using SelfClass = TConstMapIterator<MapType, KeyType, AllocatorType>;
+    using KeyValueType = MapType::KeyValueType;
+
+    TConstMapIterator(MapType& map, const TArray<KeyType, AllocatorType>& keys, int32_t index) :
+        m_Map{&map},
+        m_Keys(&keys),
+        m_Index(index)
+    {
+    }
+
+    TConstMapIterator(const SelfClass&) = default;
+    TConstMapIterator& operator=(const SelfClass&) = default;
+
+    SelfClass operator++(int)
+    {
+        return SelfClass{*m_Map, *m_Keys, m_Index + 1};
+    }
+
+    SelfClass& operator++()
+    {
+        ++m_Index;
+        return *this;
+    }
+
+    const KeyValueType& operator*() const
+    {
+        assert(m_Keys->IsValidIndex(m_Index));
+        return *m_Map->FindKeyValuePair(m_Keys->operator[](m_Index));
+    }
+
+    const KeyValueType* operator->() const
+    {
+        assert(m_Keys->IsValidIndex(m_Index));
+        return m_Map->FindKeyValuePair(m_Keys->operator[](m_Index));
+    }
+
+    bool operator==(const SelfClass& other) const
+    {
+        return m_Index == other.m_Index;
+    }
+
+    bool operator!=(const SelfClass& other) const
+    {
+        return m_Index != other.m_Index;
+    }
+
+private:
+    MapType* m_Map;
+    const TArray<KeyType, AllocatorType>* m_Keys;
+    int32_t m_Index{0};
+};
+
 template <typename KeyType, typename ValueType, typename HashFunction = DefaultHashFunctions, typename EqualCompare = std::equal_to<KeyType>,
     typename AllocatorType = DefaultAllocator>
 class TMap
@@ -294,7 +346,7 @@ public:
     using SelfClass = TMap<KeyType, ValueType, HashFunction, EqualCompare, AllocatorType>;
 
     using Iterator = TMapIterator<SelfClass, KeyType, AllocatorType>;
-    using ConstIterator = TMapIterator<const SelfClass, KeyType, AllocatorType>;
+    using ConstIterator = TConstMapIterator<const SelfClass, KeyType, AllocatorType>;
 
     TMap() = default;
 
@@ -442,6 +494,11 @@ public:
         }
 
         m_Keys.Empty();
+    }
+
+    bool Contains(const KeyType& key) const
+    {
+        return !!FindKeyValuePair(key);
     }
 
 private:

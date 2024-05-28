@@ -134,7 +134,7 @@ public:
 
     PointerType& operator*() const
     {
-        return m_CompressedPair.Ptr;
+        return *m_CompressedPair.Ptr;
     }
 
 private:

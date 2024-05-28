@@ -10,6 +10,8 @@
 #include <algorithm>
 #include <cassert>
 
+#include "Span.h"
+
 struct DefaultAllocator
 {
     void* Allocate(size_t size)
@@ -237,11 +239,25 @@ public:
         return *this;
     }
 
+    template <typename IteratorType>
+    TArray(IteratorType begin, IteratorType end) :
+        m_Data{nullptr},
+        m_NumElements{0},
+        m_NumAlloc{0}
+    {
+        for (auto i = begin; i != end; ++i)
+        {
+            Add(*i);
+        }
+    }
+
     ~TArray() noexcept
     {
         Empty();
         m_Allocator.Free(m_Data);
     }
+
+public:
 
     template <typename ...Args>
     void EmplaceBack(Args&& ...args)
@@ -550,6 +566,52 @@ public:
         std::sort(m_Data, m_Data + m_NumElements, predicate);
     }
 
+    void Sort()
+    {
+        Sort(std::less<ElementType>{});
+    }
+
+    template <typename Func>
+    void Generate(Func&& func)
+    {
+        std::generate(m_Data, m_Data + m_NumElements, std::forward<Func>(func));
+    }
+
+    void Fill(const ElementType& element)
+    {
+        std::fill(m_Data, m_Data + m_NumElements, element);
+    }
+
+    operator TSpan<ElementType>()
+    {
+        return TSpan<ElementType>{m_Data, m_NumElements};
+    }
+
+    operator TSpan<const ElementType>() const
+    {
+        return TSpan<const ElementType>{m_Data, m_NumElements};
+    }
+
+    ElementType& Back()
+    {
+        return m_Data[m_NumElements - 1];
+    }
+
+    const ElementType& Back() const
+    {
+        return m_Data[m_NumElements - 1];
+    }
+
+    const ElementType& Front() const
+    {
+        return m_Data[0];
+    }
+
+    ElementType& Front()
+    {
+        return m_Data[0];
+    }
+
 private:
     ElementType* m_Data;
     int32_t m_NumElements;
@@ -699,6 +761,27 @@ struct TStaticArray
     {
         int32_t i = FindIndexOfByPredicate(std::forward<Predicate>(predicate)...);
         return i != IndexNone;
+    }
+
+    template <typename Func>
+    void Generate(Func&& func)
+    {
+        std::generate(Data, Data + Size, std::forward<Func>(func));
+    }
+
+    void Fill(const ElementType& element)
+    {
+        std::fill(Data, Data + Size, element);
+    }
+
+    operator TSpan<ElementType>()
+    {
+        return TSpan<ElementType>{Data, Size};
+    }
+
+    operator TSpan<const ElementType>() const
+    {
+        return TSpan<const ElementType>{Data, Size};
     }
 };
 

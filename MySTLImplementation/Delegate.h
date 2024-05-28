@@ -126,6 +126,6 @@ private:
 private:
     void CloneTo(impl::DelegateStorage& storage) const
     {
-        storage.Clone(storage);
+        m_Storage.Clone(storage);
     }
 };

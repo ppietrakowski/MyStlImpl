@@ -2,8 +2,6 @@
 
 #include <cstdint>
 
-#include "Array.h"
-
 template <typename ElementType>
 class TSpanIterator
 {
@@ -30,6 +28,17 @@ public:
         return it.element != element;
     }
 
+    TSpanIterator<ElementType> operator++(int) const
+    {
+        return TSpanIterator<ElementType>{element + 1};
+    }
+
+    TSpanIterator<ElementType>& operator++()
+    {
+        element++;
+        return *this;
+    }
+
 private:
     ElementType* element;
 };
@@ -49,14 +58,14 @@ class TSpan
 public:
 
     TSpan() :
-        data(nullptr),
-        size(0)
+        m_Data(nullptr),
+        m_Size(0)
     {
     }
 
     TSpan(ElementType* array, int32_t size) :
-        data(array),
-        size(size)
+        m_Data(array),
+        m_Size(size)
     {
     }
 
@@ -66,49 +75,73 @@ public:
         using ContigousStorageTrait = TContigousStorage<ElementType>;
         static_assert(ContigousStorageTrait::IsContigous());
 
-        data = &(*begin);
+        m_Data = &(*begin);
         ElementType* e = &(*end);
-        size = int32_t(e - data);
+        m_Size = int32_t(e - m_Data);
+    }
+
+    TSpan(ElementType* begin, ElementType* end)
+    {
+        m_Data = &(*begin);
+        ElementType* e = &(*end);
+        m_Size = int32_t(e - m_Data);
+    }
+
+    template <int32_t Size>
+    TSpan(ElementType(&data)[Size]) :
+        m_Data(data),
+        m_Size(Size)
+    {
     }
 
     TSpan(const TSpan<ElementType>&) = default;
 
     TSpanIterator<ElementType> begin()
     {
-        return TSpanIterator<ElementType>(data);
+        return TSpanIterator<ElementType>(m_Data);
     }
     TSpanIterator<ElementType> end()
     {
-        return TSpanIterator<ElementType>(data + size);
+        return TSpanIterator<ElementType>(m_Data + m_Size);
     }
 
     ElementType& operator[](int32_t i) const
     {
-        assert(i >= 0 && i < size);
-        return data[i];
+        assert(i >= 0 && i < m_Size);
+        return m_Data[i];
     }
 
     intptr_t GetNumBytes() const
     {
-        return size * sizeof(ElementType);
+        return m_Size * sizeof(ElementType);
     }
 
     int32_t GetNumElements() const
     {
-        return size;
+        return m_Size;
     }
 
     ElementType* GetData() const
     {
-        return data;
+        return m_Data;
     }
 
     bool IsEmpty() const
     {
-        return size == 0;
+        return m_Size == 0;
+    }
+
+    ElementType& Front() const
+    {
+        return m_Data[0];
+    }
+
+    ElementType& Back() const
+    {
+        return m_Data[m_Size - 1];
     }
 
 private:
-    ElementType* data;
-    int32_t size;
+    ElementType* m_Data;
+    int32_t m_Size;
 };
