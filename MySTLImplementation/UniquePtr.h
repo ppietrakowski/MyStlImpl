@@ -140,3 +140,9 @@ public:
 private:
     TCompressedPair<PointerType*, DeleterType> m_CompressedPair;
 };
+
+template <typename PointerType, typename ...Args>
+inline TUniquePtr<PointerType> MakeUnique(Args&& ...args)
+{
+    return TUniquePtr<PointerType>{new PointerType{std::forward<Args>(args)...}};
+}

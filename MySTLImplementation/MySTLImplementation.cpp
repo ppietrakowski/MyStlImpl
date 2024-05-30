@@ -139,7 +139,7 @@ int main()
     map.Insert(10, 10);
     map.Insert(60, 10);
 
-    TUniquePtr<Dog> ptr = new Dog{};
+    TUniquePtr<Dog> ptr = MakeUnique<Dog>();
     TUniquePtr<IAnimal> animalv2 = std::move(ptr);
 
     TSharedPtr<IAnimal> DogInstance = MakeShared<Dog>();
@@ -154,7 +154,16 @@ int main()
 
     int pos = s.FindLastOf("at", 1);
     printf("\nindex: %i \n", pos);
-    printf("\char at index: %c \n", s[pos]);
+    printf("\nchar at index: %c \n", s[pos]);
+
+    TArray<String> temp;
+
+    s.Split(" ", temp);
+
+    TArray<CString<100>> temp2;
+    temp2.EmplaceBack();
+    temp2.EmplaceBack();
+    temp2.EmplaceBack();
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu

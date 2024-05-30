@@ -21,24 +21,133 @@ String String::Substring(int32_t startOffset, int32_t length) const
     return String{m_Data.GetData() + startOffset, length};
 }
 
+String String::Substring(int32_t startOffset) const
+{
+    int32_t l = m_Data.GetNumElements() - startOffset;
+    if (l < 0)
+    {
+        return String{};
+    }
+
+    return String{m_Data.GetData() + startOffset, m_Data.GetNumElements() - startOffset};
+}
+
+static int32_t FindImplementation(const char* str, int32_t strLength, int32_t startOffset, TSpan<const char> searchedArray)
+{
+    if (startOffset < 0)
+    {
+        return IndexNone;
+    }
+
+    const int32_t len = searchedArray.GetNumElements();
+
+    if (strLength == 0 || len == 0)
+    {
+        return IndexNone; // won't find anything!
+    }
+
+    for (int32_t i = startOffset; i <= (len - strLength); i++)
+    {
+        bool found = true;
+        for (int32_t j = 0; j < strLength; j++)
+        {
+            int32_t readPos = i + j;
+
+            if (readPos >= len)
+            {
+                return IndexNone;
+            }
+
+            if (searchedArray[readPos] != str[j])
+            {
+                found = false;
+                break;
+            }
+        }
+
+        if (found)
+        {
+            return i;
+        }
+    }
+
+    return IndexNone;
+}
+
 int32_t String::Find(const String& str, int32_t startOffset) const
 {
-    return FindImpl(str.m_Data.GetData(), str.m_Data.GetNumElements(), startOffset);
+    return FindImplementation(str.GetData(), str.GetLength(), startOffset, m_Data);
 }
 
 int32_t String::Find(const char* str, int32_t startOffset) const
 {
-    return FindImpl(str, (int32_t)std::char_traits<char>::length(str), startOffset);
+    return FindImplementation(str, CharTraits::GetLength(str), startOffset, m_Data);
+}
+
+static int32_t RFindImplementation(const char* str, TSpan<const char> data, int32_t srcLen, int32_t endOffset)
+{
+    // establish a limit
+    int32_t limit = data.GetNumElements() - srcLen;
+
+    if (limit < 0)
+    {
+        return IndexNone;
+    }
+
+    // establish a starting point
+    if (endOffset < 0)
+    {
+        endOffset = limit;
+    }
+    else if (endOffset > limit)
+    {
+        endOffset = limit;
+    }
+
+    int32_t len = data.GetNumElements();
+
+    if (srcLen == 0 || len == 0)
+    {
+        return -1; // won't find anything!
+    }
+
+    for (int32_t i = endOffset; i >= 0; i--)
+    {
+        bool found = true;
+        for (int32_t j = 0; j < srcLen; j++)
+        {
+            int32_t readPos = i + j;
+
+            if (readPos >= len)
+            {
+                return IndexNone;
+            }
+
+            if (data[readPos] != str[j])
+            {
+                found = false;
+                break;
+            }
+        }
+
+        if (found)
+        {
+            return i;
+        }
+    }
+
+    return IndexNone;
 }
 
 int32_t String::RFind(const String& str, int32_t endOffset) const
 {
-    return RFindImpl(str.m_Data.GetData(), str.m_Data.GetNumElements(), endOffset);
+    return RFindImplementation(str.GetData(), m_Data, str.GetLength(), endOffset);
 }
 
 int32_t String::RFind(const char* str, int32_t endOffset) const
 {
-    return RFindImpl(str, (int32_t)std::char_traits<char>::length(str), endOffset);
+    int32_t srcLen = CharTraits::GetLength(str);
+    return RFindImplementation(str, m_Data, srcLen, endOffset);
 }
 
 uint64_t String::GetHashCode() const
@@ -118,6 +227,11 @@ int32_t String::Compare(const char* other) const
 
 int32_t String::FindFirstOf(const char* str, int32_t startpos) const
 {
+    if (startpos == IndexNone)
+    {
+        return -1;
+    }
+
     auto i = CharTraits::Find(m_Data.UncheckedBegin() + startpos, m_Data.UncheckedEnd(),
         [str](const char c)
     {
@@ -142,6 +256,11 @@ int32_t String::FindFirstOf(const char* str, int32_t startpos) const
 
 int32_t String::FindFirstNotOf(const char* str, int32_t startpos) const
 {
+    if (startpos == IndexNone)
+    {
+        return -1;
+    }
+
     auto i = CharTraits::Find(m_Data.UncheckedBegin() + startpos, m_Data.UncheckedEnd(),
         [str](const char c)
     {
@@ -210,6 +329,37 @@ int32_t String::FindNotLastOf(const char* str, int32_t lastIndex) const
     }
 
     return static_cast<int32_t>(i - m_Data.UncheckedBegin());
+}
+
+void String::Split(const char* delimiter, TArray<String>& tokens) const
+{
+    int32_t lastPos = FindFirstNotOf(delimiter, 0);
+
+    // Find first "non-delimiter".
+    int32_t pos = FindFirstOf(delimiter, lastPos);
+
+    tokens.AllocAbs(4);
+
+    while (pos != IndexNone || lastPos != IndexNone)
+    {
+        // Found a token, add it to the vector.
+        String tmp = Substring(lastPos, pos - lastPos);
+        if (!tmp.IsEmpty())
+        {
+            tokens.Add(tmp);
+        }
+
+        if (pos == IndexNone)
+        {
+            tokens.Add(Substring(lastPos));
+        }
+
+        // Skip delimiters.  Note the "not_of"
+        lastPos = FindFirstNotOf(delimiter, pos);
+
+        // Find next "non-delimiter"
+        pos = FindFirstOf(delimiter, lastPos);
+    }
 }
 
 void String::CopyFrom(const char* str, int32_t length)

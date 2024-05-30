@@ -365,6 +365,38 @@ public:
         return *this;
     }
 
+    TSharedPtr(SelfSharedPtr&& p) noexcept:
+        m_RefCounter{nullptr},
+        m_Pointer{nullptr}
+    {
+        *this = std::move(p);
+    }
+
+    SelfSharedPtr& operator=(SelfSharedPtr&& p) noexcept
+    {
+        Clear();
+        m_RefCounter = std::exchange(p.m_RefCounter, nullptr);
+        m_Pointer = std::exchange(p.m_Pointer, nullptr);
+        return *this;
+    }
+
+    template <typename OtherPointerType>
+    TSharedPtr(TSharedPtr<OtherPointerType, ThreadMode>&& p) noexcept :
+        m_RefCounter{nullptr},
+        m_Pointer{nullptr}
+    {
+        *this = std::move(p);
+    }
+
+    template <typename OtherPointerType>
+    SelfSharedPtr& operator=(TSharedPtr<OtherPointerType, ThreadMode>&& p) noexcept
+    {
+        Clear();
+        m_RefCounter = (RefCounter*)std::exchange(p.m_RefCounter, nullptr);
+        m_Pointer = static_cast<PointerType*>(std::exchange(p.m_Pointer, nullptr));
+        return *this;
+    }
+
     ~TSharedPtr() noexcept
     {
         Clear();

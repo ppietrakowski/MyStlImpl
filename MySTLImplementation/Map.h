@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "Array.h"
+#include "FixedString.h"
 #include "Optional.h"
 #include "String.h"
 #include <string>
@@ -203,6 +204,17 @@ struct DefaultHashFunctions
     {
         uint64_t n = std::hash<std::string>()(element);
         return static_cast<uint64_t>(n);
+    }
+
+    uint64_t operator()(const String& element) const
+    {
+        return element.GetHashCode();
+    }
+
+    template <int32_t N>
+    uint64_t operator()(const CString<N>& element) const
+    {
+        return element.GetHashCode();
     }
 };
 

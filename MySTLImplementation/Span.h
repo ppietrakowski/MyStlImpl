@@ -69,19 +69,18 @@ public:
     {
     }
 
+    TSpan(ElementType* begin, ElementType* end) :
+        m_Data(begin),
+        m_Size(int32_t(end - begin))
+    {
+    }
+
     template <typename IteratorType>
     TSpan(IteratorType begin, IteratorType end)
     {
         using ContigousStorageTrait = TContigousStorage<ElementType>;
         static_assert(ContigousStorageTrait::IsContigous());
 
-        m_Data = &(*begin);
-        ElementType* e = &(*end);
-        m_Size = int32_t(e - m_Data);
-    }
-
-    TSpan(ElementType* begin, ElementType* end)
-    {
         m_Data = &(*begin);
         ElementType* e = &(*end);
         m_Size = int32_t(e - m_Data);
