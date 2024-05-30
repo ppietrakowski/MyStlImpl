@@ -9,6 +9,7 @@
 #include <codecvt>
 
 #include <iostream>
+#include <string_view>
 
 template <typename T>
 struct TCharTraits
@@ -110,6 +111,11 @@ public:
         CopyFrom(str, length);
     }
 
+    explicit String(std::string_view str)
+    {
+        CopyFrom(str.data(), (int32_t)str.length());
+    }
+
     String& operator=(const char* str)
     {
         CopyFrom(str, (int32_t)strlen(str));
@@ -122,9 +128,11 @@ public:
 
     int32_t Find(const String& str, int32_t startOffset = 0) const;
     int32_t Find(const char* str, int32_t startOffset = 0) const;
+    int32_t Find(std::string_view str, int32_t startOffset = 0) const;
 
     int32_t RFind(const String& str, int32_t endOffset = 0) const;
     int32_t RFind(const char* str, int32_t endOffset = 0) const;
+    int32_t RFind(std::string_view str, int32_t endOffset = 0) const;
 
     int32_t GetLength() const
     {
@@ -147,6 +155,7 @@ public:
 
     int32_t Compare(const String& other) const;
     int32_t Compare(const char* other) const;
+    int32_t Compare(std::string_view other) const;
 
     bool operator==(const String& other) const
     {
@@ -179,9 +188,16 @@ public:
     }
     
     int32_t FindFirstOf(const char* str, int32_t startpos = 0) const;
+    int32_t FindFirstOf(std::string_view str, int32_t startpos = 0) const;
+
     int32_t FindFirstNotOf(const char* str, int32_t startpos = 0) const;
+    int32_t FindFirstNotOf(std::string_view str, int32_t startpos = 0) const;
+
     int32_t FindLastOf(const char* str, int32_t lastIndex = 0) const;
+    int32_t FindLastOf(std::string_view str, int32_t lastIndex = 0) const;
+
     int32_t FindNotLastOf(const char* str, int32_t lastIndex = 0) const;
+    int32_t FindNotLastOf(std::string_view str, int32_t lastIndex = 0) const;
     
     char operator[](int32_t index) const
     {

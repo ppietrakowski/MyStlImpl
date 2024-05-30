@@ -84,6 +84,11 @@ int32_t String::Find(const char* str, int32_t startOffset) const
     return FindImplementation(str, CharTraits::GetLength(str), startOffset, m_Data);
 }
 
+int32_t String::Find(std::string_view str, int32_t startOffset) const
+{
+    return 0;
+}
+
 static int32_t RFindImplementation(const char* str, TSpan<const char> data, int32_t srcLen, int32_t endOffset)
 {
     // establish a limit
@@ -142,6 +147,11 @@ static int32_t RFindImplementation(const char* str, TSpan<const char> data, int3
 int32_t String::RFind(const String& str, int32_t endOffset) const
 {
     return RFindImplementation(str.GetData(), m_Data, str.GetLength(), endOffset);
+}
+
+int32_t String::RFind(std::string_view str, int32_t endOffset) const
+{
+    return RFindImplementation(str.data(), m_Data, (int32_t)str.length(), endOffset);
 }
 
 int32_t String::RFind(const char* str, int32_t endOffset) const
@@ -225,17 +235,24 @@ int32_t String::Compare(const char* other) const
     return std::char_traits<char>::compare(m_Data.GetData(), other, length);
 }
 
-int32_t String::FindFirstOf(const char* str, int32_t startpos) const
+int32_t String::Compare(std::string_view other) const
+{
+    size_t len = other.length();
+    int32_t length = std::min<int32_t>((int32_t)len, GetLength());
+    return std::char_traits<char>::compare(m_Data.GetData(), other.data(), length);
+}
+
+static int32_t FindFirstOfImpl(const char* strBegin, const char* strEnd, int32_t startpos, const TArray<char>& data)
 {
     if (startpos == IndexNone)
     {
         return -1;
     }
 
-    auto i = CharTraits::Find(m_Data.UncheckedBegin() + startpos, m_Data.UncheckedEnd(),
-        [str](const char c)
+    auto i = String::CharTraits::Find(data.UncheckedBegin() + startpos, data.UncheckedEnd(),
+        [strBegin, strEnd](const char c)
     {
-        for (const char* it = str; *it; ++it)
+        for (const char* it = strBegin; it != strEnd; ++it)
         {
             if (*it == c)
             {
@@ -251,44 +268,64 @@ int32_t String::FindFirstOf(const char* str, int32_t startpos) const
         return IndexNone;
     }
 
-    return static_cast<int32_t>(i - m_Data.UncheckedBegin());
+    return static_cast<int32_t>(i - data.UncheckedBegin());
+}
+
+int32_t String::FindFirstOf(const char* str, int32_t startpos) const
+{
+    return FindFirstOfImpl(str, str + strlen(str), startpos, m_Data);
+}
+
+int32_t String::FindFirstOf(std::string_view str, int32_t startpos) const
+{
+    return FindFirstOfImpl(str.data(), str.data() + str.size(), startpos, m_Data);
+}
+
+static int32_t FindFirstNotOfImpl(const char* strBegin, const char* strEnd, int32_t startpos, const TArray<char>& data)
+{
+    if (startpos == IndexNone)
+    {
+        return -1;
+    }
+
+    auto i = String::CharTraits::Find(data.UncheckedBegin() + startpos, data.UncheckedEnd(),
+        [strBegin, strEnd](const char c)
+    {
+        for (const char* it = strBegin; it != strEnd; ++it)
+        {
+            if (*it != c)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    });
+
+    if (!i)
+    {
+        return IndexNone;
+    }
+
+    return static_cast<int32_t>(i - data.UncheckedBegin());
 }
 
 int32_t String::FindFirstNotOf(const char* str, int32_t startpos) const
 {
-    if (startpos == IndexNone)
-    {
-        return -1;
-    }
-
-    auto i = CharTraits::Find(m_Data.UncheckedBegin() + startpos, m_Data.UncheckedEnd(),
-        [str](const char c)
-    {
-        for (const char* it = str; *it; ++it)
-        {
-            if (*it != c)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    });
-
-    if (!i)
-    {
-        return IndexNone;
-    }
-
-    return static_cast<int32_t>(i - m_Data.UncheckedBegin());
+    return FindFirstNotOfImpl(str, str + strlen(str), startpos, m_Data);
 }
 
-int32_t String::FindLastOf(const char* str, int32_t lastIndex) const
+int32_t String::FindFirstNotOf(std::string_view str, int32_t startpos) const
 {
-    auto i = CharTraits::FindReverse(m_Data.UncheckedBegin(), m_Data.UncheckedEnd() - 1 - lastIndex,
-        [str](const char c)
+    return FindFirstNotOfImpl(str.data(), str.data() + str.size(), startpos, m_Data);
+}
+
+static int32_t FindLastOfImpl(const char* strBegin, const char* strEnd, int32_t lastIndex, const TArray<char>& data)
+{
+    auto i = String::CharTraits::FindReverse(data.UncheckedBegin(), data.UncheckedEnd() - 1 - lastIndex,
+        [strBegin, strEnd](const char c)
     {
-        for (const char* it = str; *it; ++it)
+        for (const char* it = strBegin; it != strEnd; ++it)
         {
             if (*it == c)
             {
@@ -304,15 +341,25 @@ int32_t String::FindLastOf(const char* str, int32_t lastIndex) const
         return IndexNone;
     }
 
-    return static_cast<int32_t>(i - m_Data.UncheckedBegin());
+    return static_cast<int32_t>(i - data.UncheckedBegin());
 }
 
-int32_t String::FindNotLastOf(const char* str, int32_t lastIndex) const
+int32_t String::FindLastOf(const char* str, int32_t lastIndex) const
 {
-    auto i = CharTraits::FindReverse(m_Data.UncheckedBegin(), m_Data.UncheckedEnd() - 2 - lastIndex,
-        [str](const char c)
+    return FindLastOfImpl(str, str + strlen(str), lastIndex, m_Data);
+}
+
+int32_t String::FindLastOf(std::string_view str, int32_t lastIndex) const
+{
+    return FindLastOfImpl(str.data(), str.data() + str.size(), lastIndex, m_Data);
+}
+
+static int32_t FindLastNotOfImpl(const char* strBegin, const char* strEnd, int32_t lastIndex, const TArray<char>& data)
+{
+    auto i = String::CharTraits::FindReverse(data.UncheckedBegin(), data.UncheckedEnd() - 1 - lastIndex,
+        [strBegin, strEnd](const char c)
     {
-        for (const char* it = str; *it; ++it)
+        for (const char* it = strBegin; it != strEnd; ++it)
         {
             if (*it != c)
             {
@@ -328,7 +375,17 @@ int32_t String::FindNotLastOf(const char* str, int32_t lastIndex) const
         return IndexNone;
     }
 
-    return static_cast<int32_t>(i - m_Data.UncheckedBegin());
+    return static_cast<int32_t>(i - data.UncheckedBegin());
+}
+
+int32_t String::FindNotLastOf(const char* str, int32_t lastIndex) const
+{
+    return FindLastNotOfImpl(str, str + strlen(str), lastIndex, m_Data);
+}
+
+int32_t String::FindNotLastOf(std::string_view str, int32_t lastIndex) const
+{
+    return FindLastNotOfImpl(str.data(), str.data() + str.size(), lastIndex, m_Data);
 }
 
 void String::Split(const char* delimiter, TArray<String>& tokens) const
