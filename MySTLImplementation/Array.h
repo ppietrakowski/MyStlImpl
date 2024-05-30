@@ -389,7 +389,7 @@ public:
 
         for (int32_t i = 0; i < m_NumElements; ++i)
         {
-            m_Allocator.ConstructElement(&data[i], std::move(data[i]));
+            m_Allocator.ConstructElement(&data[i], std::move(m_Data[i]));
         }
 
         m_Allocator.DestroyRange(m_Data, m_Data + m_NumElements);
@@ -471,7 +471,7 @@ public:
 
         for (int32_t i = 0; i < m_NumElements; ++i)
         {
-            m_Allocator.ConstructElement(&data[i], std::move(data[i]));
+            m_Allocator.ConstructElement(&data[i], std::move(m_Data[i]));
         }
 
         m_Allocator.DestroyRange(data, data + m_NumElements);
@@ -610,6 +610,26 @@ public:
     ElementType& Front()
     {
         return m_Data[0];
+    }
+
+    ElementType* UncheckedBegin()
+    {
+        return m_Data;
+    }
+
+    const ElementType* UncheckedBegin() const
+    {
+        return m_Data;
+    }
+
+    ElementType* UncheckedEnd()
+    {
+        return m_Data + m_NumElements;
+    }
+
+    const ElementType* UncheckedEnd() const
+    {
+        return m_Data + m_NumElements;
     }
 
 private:

@@ -123,8 +123,8 @@ int main()
 
     TSharedPtr<IAnimal> p = MakeShared<Dog>();
 
-    TWeakPointer<IAnimal> animal = p;
-    TWeakPointer<IAnimal> animal2 = animal;
+    TWeakPtr<IAnimal> animal = p;
+    TWeakPtr<IAnimal> animal2 = animal;
 
     TSharedPtr<IAnimal> p2 = p;
 
@@ -141,6 +141,20 @@ int main()
 
     TUniquePtr<Dog> ptr = new Dog{};
     TUniquePtr<IAnimal> animalv2 = std::move(ptr);
+
+    TSharedPtr<IAnimal> DogInstance = MakeShared<Dog>();
+    TWeakPtr<IAnimal> DogWeak = DogInstance;
+    
+    if (DogWeak.IsValid())
+    {
+        DogWeak->DoSpeak();
+    }
+
+    String s = "Ala ma kota";
+
+    int pos = s.FindLastOf("at", 1);
+    printf("\nindex: %i \n", pos);
+    printf("\char at index: %c \n", s[pos]);
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu

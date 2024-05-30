@@ -275,7 +275,7 @@ template <typename PointerType, EThreadMode ThreadMode = EThreadMode::Auto>
 class TSharedPtr
 {
     template <typename OtherPointerType, EThreadMode OtherThreadMode>
-    friend class TWeakPointer;
+    friend class TWeakPtr;
 
     template <typename OtherPointerType, EThreadMode OtherThreadMode>
     friend class TSharedPtr;
@@ -441,41 +441,32 @@ private:
 };
 
 template <typename PointerType, EThreadMode ThreadMode = EThreadMode::Auto>
-class TWeakPointer
+class TWeakPtr
 {
     template <typename To, EThreadMode ThreadMode, typename From>
-    friend TWeakPointer<To, ThreadMode> DynamicCast(const TWeakPointer<From, ThreadMode>& from);
+    friend TWeakPtr<To, ThreadMode> DynamicCast(const TWeakPtr<From, ThreadMode>& from);
 
     template <typename To, EThreadMode ThreadMode, typename From>
-    friend TWeakPointer<To, ThreadMode> ReinterpretCast(const TWeakPointer<From, ThreadMode>& from);
+    friend TWeakPtr<To, ThreadMode> ReinterpretCast(const TWeakPtr<From, ThreadMode>& from);
 
 public:
     using SharedPtr = TSharedPtr<PointerType, ThreadMode>;
     using RefCounter = SharedPtr::RefCounter;
 
-    TWeakPointer() = default;
+    TWeakPtr() = default;
 
     template <typename OtherPointerType>
-    TWeakPointer(const TSharedPtr<OtherPointerType, ThreadMode>& p) :
+    TWeakPtr(const TSharedPtr<OtherPointerType, ThreadMode>& p) :
         m_RefCounter((RefCounter*)p.m_RefCounter)
     {
-        static_assert(std::is_assignable_v<PointerType*, OtherPointerType*>);
+        static_assert(std::is_convertible_v<OtherPointerType*, PointerType*>);
         if (m_RefCounter)
         {
             m_RefCounter->AddWeakRef();
         }
     }
 
-    TWeakPointer(const TSharedPtr<PointerType, ThreadMode>& p) :
-        m_RefCounter((RefCounter*)p.m_RefCounter)
-    {
-        if (m_RefCounter)
-        {
-            m_RefCounter->AddWeakRef();
-        }
-    }
-
-    TWeakPointer(const TWeakPointer<PointerType, ThreadMode>& p) :
+    TWeakPtr(const TSharedPtr<PointerType, ThreadMode>& p) :
         m_RefCounter((RefCounter*)p.m_RefCounter)
     {
         if (m_RefCounter)
@@ -484,7 +475,16 @@ public:
         }
     }
 
-    TWeakPointer& operator=(const TWeakPointer<PointerType, ThreadMode>& p)
+    TWeakPtr(const TWeakPtr<PointerType, ThreadMode>& p) :
+        m_RefCounter((RefCounter*)p.m_RefCounter)
+    {
+        if (m_RefCounter)
+        {
+            m_RefCounter->AddWeakRef();
+        }
+    }
+
+    TWeakPtr& operator=(const TWeakPtr<PointerType, ThreadMode>& p)
     {
         Clear();
         m_RefCounter = p.m_RefCounter;
@@ -498,7 +498,7 @@ public:
     }
 
     template <typename OtherPointerType>
-    TWeakPointer& operator=(const TSharedPtr<OtherPointerType, ThreadMode>& p)
+    TWeakPtr& operator=(const TSharedPtr<OtherPointerType, ThreadMode>& p)
     {
         static_assert(std::is_assignable_v<PointerType*, OtherPointerType*>);
         Clear();
@@ -513,7 +513,7 @@ public:
         return *this;
     }
 
-    TWeakPointer& operator=(const TSharedPtr<PointerType, ThreadMode>& p)
+    TWeakPtr& operator=(const TSharedPtr<PointerType, ThreadMode>& p)
     {
         Clear();
 
@@ -528,7 +528,7 @@ public:
     }
 
     template <typename OtherPointerType>
-    TWeakPointer(const TWeakPointer<OtherPointerType, ThreadMode>& p)
+    TWeakPtr(const TWeakPtr<OtherPointerType, ThreadMode>& p)
     {
         static_assert(std::is_assignable_v<PointerType*, OtherPointerType*>);
         m_RefCounter = (RefCounter*)p.m_RefCounter;
@@ -539,7 +539,7 @@ public:
         }
     }
 
-    ~TWeakPointer() noexcept
+    ~TWeakPtr() noexcept
     {
         Clear();
     }
@@ -558,12 +558,16 @@ public:
 
     PointerType* operator->() const
     {
-        return m_RefCounter->GetPointer();
+        PointerType* pointer = m_RefCounter->GetPointer();
+        assert(pointer != nullptr && "Retrieving dead object");
+        return pointer;
     }
 
     PointerType& operator*() const
     {
-        return *m_RefCounter->GetPointer();
+        PointerType* pointer = m_RefCounter->GetPointer();
+        assert(pointer != nullptr);
+        return *pointer;
     }
 
     TSharedPtr<PointerType, ThreadMode> ToShared() const
@@ -645,24 +649,24 @@ TSharedPtr<To, ThreadMode> ReinterpretCast(const TSharedPtr<From, ThreadMode>& f
 }
 
 template <typename To, EThreadMode ThreadMode, typename From>
-TWeakPointer<To, ThreadMode> DynamicCast(const TWeakPointer<From, ThreadMode>& from)
+TWeakPtr<To, ThreadMode> DynamicCast(const TWeakPtr<From, ThreadMode>& from)
 {
-    using RefCounter = TWeakPointer<To, ThreadMode>::RefCounter;
+    using RefCounter = TWeakPtr<To, ThreadMode>::RefCounter;
 
     To* p = dynamic_cast<To*>(from.Get());
     if (p)
     {
         from.m_RefCounter->AddWeakRef();
-        return TWeakPointer<To, ThreadMode>((RefCounter*)from.m_RefCounter);
+        return TWeakPtr<To, ThreadMode>((RefCounter*)from.m_RefCounter);
     }
 
     return NULL;
 }
 
 template <typename To, EThreadMode ThreadMode, typename From>
-TWeakPointer<To, ThreadMode> ReinterpretCast(const TWeakPointer<From, ThreadMode>& from)
+TWeakPtr<To, ThreadMode> ReinterpretCast(const TWeakPtr<From, ThreadMode>& from)
 {
-    using RefCounter = TWeakPointer<To, ThreadMode>::RefCounter;
+    using RefCounter = TWeakPtr<To, ThreadMode>::RefCounter;
     from.m_RefCounter->AddWeakRef();
-    return TWeakPointer<To, ThreadMode>((RefCounter*)from.m_RefCounter);
+    return TWeakPtr<To, ThreadMode>((RefCounter*)from.m_RefCounter);
 }

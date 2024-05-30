@@ -116,6 +116,102 @@ int32_t String::Compare(const char* other) const
     return std::char_traits<char>::compare(m_Data.GetData(), other, length);
 }
 
+int32_t String::FindFirstOf(const char* str, int32_t startpos) const
+{
+    auto i = CharTraits::Find(m_Data.UncheckedBegin() + startpos, m_Data.UncheckedEnd(),
+        [str](const char c)
+    {
+        for (const char* it = str; *it; ++it)
+        {
+            if (*it == c)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    });
+
+    if (!i)
+    {
+        return IndexNone;
+    }
+
+    return static_cast<int32_t>(i - m_Data.UncheckedBegin());
+}
+
+int32_t String::FindFirstNotOf(const char* str, int32_t startpos) const
+{
+    auto i = CharTraits::Find(m_Data.UncheckedBegin() + startpos, m_Data.UncheckedEnd(),
+        [str](const char c)
+    {
+        for (const char* it = str; *it; ++it)
+        {
+            if (*it != c)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    });
+
+    if (!i)
+    {
+        return IndexNone;
+    }
+
+    return static_cast<int32_t>(i - m_Data.UncheckedBegin());
+}
+
+int32_t String::FindLastOf(const char* str, int32_t lastIndex) const
+{
+    auto i = CharTraits::FindReverse(m_Data.UncheckedBegin(), m_Data.UncheckedEnd() - 1 - lastIndex,
+        [str](const char c)
+    {
+        for (const char* it = str; *it; ++it)
+        {
+            if (*it == c)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    });
+
+    if (!i)
+    {
+        return IndexNone;
+    }
+
+    return static_cast<int32_t>(i - m_Data.UncheckedBegin());
+}
+
+int32_t String::FindNotLastOf(const char* str, int32_t lastIndex) const
+{
+    auto i = CharTraits::FindReverse(m_Data.UncheckedBegin(), m_Data.UncheckedEnd() - 2 - lastIndex,
+        [str](const char c)
+    {
+        for (const char* it = str; *it; ++it)
+        {
+            if (*it != c)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    });
+
+    if (!i)
+    {
+        return IndexNone;
+    }
+
+    return static_cast<int32_t>(i - m_Data.UncheckedBegin());
+}
+
 void String::CopyFrom(const char* str, int32_t length)
 {
     assert(str != nullptr);

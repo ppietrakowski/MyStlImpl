@@ -10,11 +10,68 @@
 
 #include <iostream>
 
+template <typename T>
+struct TCharTraits
+{
+    static int32_t GetLength(const T* str)
+    {
+        int32_t length = 0;
+
+        for (const T* i = str; *i != 0; ++i)
+        {
+            ++length;
+        }
+
+        return length;
+    }
+
+    static void Copy(T* destination, const T* src, int32_t srcLength)
+    {
+        for (int32_t i = 0; i < srcLength && *src != 0; ++i)
+        {
+            *destination++ = *src++;
+        }
+    }
+
+    template <typename PredicateType>
+    static const T* Find(const T* begin, const T* end, PredicateType&& predicate)
+    {
+        for (const T* i = begin; i != end; ++i)
+        {
+            if (predicate(*i))
+            {
+                return i;
+            }
+        }
+
+        return nullptr;
+    }
+
+    template <typename PredicateType>
+    static const T* FindReverse(const T* begin, const T* end, PredicateType&& predicate)
+    {
+        for (const T* i = end -1; i != begin; --i)
+        {
+            if (predicate(*i))
+            {
+                return i;
+            }
+        }
+
+        return nullptr;
+    }
+
+    static int32_t Compare(const T* a, const T* b, int32_t count)
+    {
+        return memcmp(a, b, count * sizeof(T));
+    }
+};
 
 class String
 {
 public:
     using CharContainer = TArray<char>;
+    typedef TCharTraits<char> CharTraits;
 
     String() = default;
 
@@ -32,8 +89,16 @@ public:
         return *this;
     }
 
-    String(String&&) noexcept = default;
-    String& operator=(String&&) noexcept = default;
+    String(String&& str) noexcept:
+        m_Data(std::move(str.m_Data))
+    {
+    }
+
+    String& operator=(String&& str) noexcept
+    {
+        m_Data = std::move(str.m_Data);
+        return *this;
+    }
 
     String(const char* str, int32_t length = -1)
     {
@@ -43,6 +108,12 @@ public:
         }
 
         CopyFrom(str, length);
+    }
+
+    String& operator=(const char* str)
+    {
+        CopyFrom(str, (int32_t)strlen(str));
+        return *this;
     }
 
     void Append(const char* str, int32_t length);
@@ -56,7 +127,7 @@ public:
 
     int32_t GetLength() const
     {
-        return m_Data.GetNumElements();
+        return m_Data.GetNumElements() - 1;
     }
 
     uint64_t GetHashCode() const;
@@ -104,6 +175,22 @@ public:
     bool operator>(const char* other) const
     {
         return Compare(other) > 0;
+    }
+    
+    int32_t FindFirstOf(const char* str, int32_t startpos = 0) const;
+    int32_t FindFirstNotOf(const char* str, int32_t startpos = 0) const;
+    int32_t FindLastOf(const char* str, int32_t lastIndex = 0) const;
+    int32_t FindNotLastOf(const char* str, int32_t lastIndex = 0) const;
+    
+    char operator[](int32_t index) const
+    {
+        return m_Data[index];
+    }
+
+    char& operator[](int32_t index)
+    {
+        assert(index >= 0 & m_Data.GetNumElements() - 1);
+        return m_Data[index];
     }
 
 private:
