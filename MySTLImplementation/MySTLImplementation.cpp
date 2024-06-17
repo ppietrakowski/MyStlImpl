@@ -136,8 +136,10 @@ int main()
     TSharedPtr<Dog> dog = DynamicCast<Dog>(p);
 
     TMap<int, int> map;
-    map.Insert(10, 10);
-    map.Insert(60, 10);
+    for (int32_t i = 10; i < 70; ++i)
+    {
+        map.Insert(i, i + 100);
+    }
 
     TUniquePtr<Dog> ptr = MakeUnique<Dog>();
     TUniquePtr<IAnimal> animalv2 = std::move(ptr);

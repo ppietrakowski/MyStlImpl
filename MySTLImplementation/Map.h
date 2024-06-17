@@ -568,8 +568,8 @@ private:
         }
         else
         {
-            newHashes.AddZeroed(m_Hashes.GetNumElements());
-            newBuckets.AddZeroed(m_Buckets.GetNumElements());
+            newHashes.AddZeroed(2 * m_Hashes.GetNumElements());
+            newBuckets.AddZeroed(2 * m_Buckets.GetNumElements());
         }
 
         for (auto& v : this->m_Buckets)
