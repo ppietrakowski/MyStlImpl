@@ -436,6 +436,11 @@ public:
     /* Returns key value pair or nullptr if couldn't be find. Key property must not be changed */
     TKeyValue<KeyType, ValueType>* FindKeyValuePair(const KeyType& key)
     {
+        if (m_Buckets.IsEmpty())
+        {
+            return nullptr;
+        }
+
         uint64_t hash = m_HashFunction(key);
         int32_t pos = static_cast<int32_t>(hash % m_Buckets.GetNumAlloc());
 
@@ -450,6 +455,11 @@ public:
     /* Returns key value pair or nullptr if couldn't be find. Key property must not be changed */
     const TKeyValue<KeyType, ValueType>* FindKeyValuePair(const KeyType& key) const
     {
+        if (m_Buckets.IsEmpty())
+        {
+            return nullptr;
+        }
+
         uint64_t hash = m_HashFunction(key);
         int32_t pos = static_cast<int32_t>(hash % m_Buckets.GetNumAlloc());
 
