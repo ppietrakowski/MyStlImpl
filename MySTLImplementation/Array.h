@@ -643,14 +643,21 @@ private:
     {
         if (m_NumElements >= m_NumAlloc)
         {
-            int32_t cap = m_NumAlloc + m_NumAlloc / 2;
-            if (cap == 0)
-            {
-                cap = 16;
-            }
-
+            int32_t cap = CalculateGrowth(m_NumElements + 1);
             AllocAbs(cap);
         }
+    }
+
+    int32_t CalculateGrowth(int32_t newCapacity)
+    {
+        int32_t cap = m_NumAlloc + m_NumAlloc / 2;
+
+        if (cap < newCapacity)
+        {
+            return newCapacity;
+        }
+
+        return cap;
     }
 };
 
