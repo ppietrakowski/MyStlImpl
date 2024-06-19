@@ -11,10 +11,11 @@
 #include <cassert>
 
 #include "Span.h"
+#include "Algorithm.h"
 
 struct DefaultAllocator
 {
-    void* Allocate(size_t size)
+    void* Allocate(intptr_t size)
     {
         void* m = calloc(1, size);
         if (!m)
@@ -57,8 +58,6 @@ struct DefaultAllocator
         }
     }
 };
-
-constexpr int32_t IndexNone = -1;
 
 template <typename ContainerType, typename ValueType>
 class TArrayIterator
@@ -221,12 +220,12 @@ public:
         return *this;
     }
 
-    TArray(TArray<ElementType, AllocatorType>&& elements) noexcept
+    TArray(TArray<ElementType, AllocatorType>&& elements) noexcept :
+        m_Data(std::exchange(elements.m_Data, nullptr)),
+        m_NumElements(std::exchange(elements.m_NumElements, 0)),
+        m_NumAlloc(std::exchange(elements.m_NumAlloc, 0)),
+        m_Allocator(std::exchange(elements.m_Allocator, AllocatorType{}))
     {
-        m_Data = std::exchange(elements.m_Data, nullptr);
-        m_NumElements = std::exchange(elements.m_NumElements, 0);
-        m_NumAlloc = std::exchange(elements.m_NumAlloc, 0);
-        m_Allocator = std::exchange(elements.m_Allocator, AllocatorType{});
     }
 
     TArray& operator=(TArray<ElementType, AllocatorType>&& elements) noexcept
@@ -384,19 +383,7 @@ public:
             return;
         }
 
-        int32_t newCapacity = delta + m_NumAlloc;
-        ElementType* data = (ElementType*)m_Allocator.Allocate(newCapacity * sizeof(ElementType));
-
-        for (int32_t i = 0; i < m_NumElements; ++i)
-        {
-            m_Allocator.ConstructElement(&data[i], std::move(m_Data[i]));
-        }
-
-        m_Allocator.DestroyRange(m_Data, m_Data + m_NumElements);
-        m_Allocator.Free(m_Data);
-
-        m_Data = data;
-        m_NumAlloc = newCapacity;
+        SetAllocSize(delta + m_NumAlloc);
     }
 
     void AllocAbs(int32_t abs)
@@ -414,36 +401,20 @@ public:
         return m_NumAlloc;
     }
 
-    int32_t GetSizeBytes() const
+    intptr_t GetSizeBytes() const
     {
-        return m_NumElements * sizeof(ElementType);
+        return static_cast<intptr_t>(m_NumElements) * sizeof(ElementType);
     }
 
-    int32_t FindIndexOf(const ElementType& type) const
+    int32_t FindIndexOf(const ElementType& element) const
     {
-        for (int32_t i = 0; i < m_NumElements; ++i)
-        {
-            if (m_Data[i] == type)
-            {
-                return i;
-            }
-        }
-
-        return IndexNone;
+        return Arrays::Find(m_Data, m_Data + m_NumElements, element);
     }
 
-    template <typename Predicate>
+    template <std::predicate<const ElementType> Predicate>
     int32_t FindIndexOfByPredicate(Predicate&& predicate) const
     {
-        for (int32_t i = 0; i < m_NumElements; ++i)
-        {
-            if (predicate(m_Data[i]))
-            {
-                return i;
-            }
-        }
-
-        return IndexNone;
+        return Arrays::FindPredicate(m_Data, m_Data + m_NumElements, predicate);
     }
 
     bool Contains(const ElementType& element) const
@@ -466,19 +437,7 @@ public:
             return;
         }
 
-        int32_t newCapacity = m_NumElements;
-        ElementType* data = (ElementType*)m_Allocator.Allocate(newCapacity * sizeof(ElementType));
-
-        for (int32_t i = 0; i < m_NumElements; ++i)
-        {
-            m_Allocator.ConstructElement(&data[i], std::move(m_Data[i]));
-        }
-
-        m_Allocator.DestroyRange(data, data + m_NumElements);
-        m_Allocator.Free(data);
-
-        m_Data = data;
-        m_NumAlloc = newCapacity;
+        SetAllocSize(m_NumElements);
     }
 
     void RemoveIndex(int32_t index)
@@ -560,10 +519,10 @@ public:
         return m_Data[index];
     }
 
-    template <typename Predicate = std::less<ElementType>>
+    template <typename Predicate>
     void Sort(Predicate&& predicate)
     {
-        std::sort(m_Data, m_Data + m_NumElements, predicate);
+        Arrays::Sort(m_Data, m_Data + m_NumElements, predicate);
     }
 
     void Sort()
@@ -594,21 +553,25 @@ public:
 
     ElementType& Back()
     {
+        assert(m_NumElements > 0);
         return m_Data[m_NumElements - 1];
     }
 
     const ElementType& Back() const
     {
+        assert(m_NumElements > 0);
         return m_Data[m_NumElements - 1];
     }
 
     const ElementType& Front() const
     {
+        assert(m_NumElements > 0);
         return m_Data[0];
     }
 
     ElementType& Front()
     {
+        assert(m_NumElements > 0);
         return m_Data[0];
     }
 
@@ -658,6 +621,23 @@ private:
         }
 
         return cap;
+    }
+
+    void SetAllocSize(int32_t allocSize)
+    {
+        int32_t newCapacity = allocSize;
+        ElementType* data = (ElementType*)m_Allocator.Allocate(newCapacity * sizeof(ElementType));
+
+        for (int32_t i = 0; i < m_NumElements; ++i)
+        {
+            m_Allocator.ConstructElement(&data[i], std::move(m_Data[i]));
+        }
+
+        m_Allocator.DestroyRange(m_Data, m_Data + m_NumElements);
+        m_Allocator.Free(m_Data);
+
+        m_Data = data;
+        m_NumAlloc = newCapacity;
     }
 };
 
@@ -745,36 +725,20 @@ struct TStaticArray
         return Size;
     }
 
-    constexpr int32_t GetSizeBytes() const
+    constexpr intptr_t GetSizeBytes() const
     {
-        return Size * sizeof(ElementType);
+        return static_cast<intptr_t>(Size) * sizeof(ElementType);
     }
 
     int32_t FindIndexOf(const ElementType& type) const
     {
-        for (int32_t i = 0; i < Size; ++i)
-        {
-            if (Data[i] == type)
-            {
-                return i;
-            }
-        }
-
-        return IndexNone;
+        return Arrays::Find(Data, Data + Size, type);
     }
 
     template <typename Predicate>
     int32_t FindIndexOfByPredicate(Predicate&& predicate) const
     {
-        for (int32_t i = 0; i < Size; ++i)
-        {
-            if (predicate(Data[i]))
-            {
-                return i;
-            }
-        }
-
-        return IndexNone;
+        return Arrays::FindPredicate(Data, Data + Size, predicate);
     }
 
     bool Contains(const ElementType& element) const
@@ -824,3 +788,5 @@ struct Enforce_same
 template <class _First, class... _Rest>
 TStaticArray(_First, _Rest...) -> TStaticArray<typename Enforce_same<_First, _Rest...>::type, 1 + sizeof...(_Rest)>;
 
+template <typename T>
+concept TIsStdLayout = std::is_standard_layout_v<T>;

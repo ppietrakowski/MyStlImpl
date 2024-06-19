@@ -602,7 +602,7 @@ public:
         return *pointer;
     }
 
-    TSharedPtr<PointerType, ThreadMode> ToShared() const
+    TSharedPtr<PointerType, ThreadMode> AsShared() const
     {
         if (m_RefCounter)
         {

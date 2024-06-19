@@ -92,8 +92,9 @@ int main()
     d.EmplaceBack(70);
 
     d.EmplaceBack();
-
     TArray<FVideoMode> devices;
+
+    devices.GetSizeBytes();
 
     devices.EmplaceBack(FVideoMode{1280, 720, EDeviceType::DirectX11, true});
     devices.EmplaceBack();
@@ -102,7 +103,6 @@ int main()
     devices.EmplaceBack();
 
     TArray<FVideoMode> devices2 = devices;
-
     for (auto& dev : devices)
     {
         printf("%ix%i SupportsHardware=%i DeviceIndex=%i\n", dev.Width, dev.Height,
@@ -131,7 +131,7 @@ int main()
     p2 = p;
 
     animal = animal2;
-    p = animal.ToShared();
+    p = animal.AsShared();
 
     TSharedPtr<Dog> dog = DynamicCast<Dog>(p);
 

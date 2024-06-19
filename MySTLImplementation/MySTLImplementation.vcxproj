@@ -130,6 +130,7 @@
   <ItemGroup>
     <ClCompile Include="FixedString.cpp" />
     <ClCompile Include="MySTLImplementation.cpp" />
+    <ClCompile Include="Algorithm.h" />
     <ClCompile Include="String.cpp" />
   </ItemGroup>
   <ItemGroup>
